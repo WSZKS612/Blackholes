@@ -3,345 +3,393 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Spacetime Warp Diagram (Interactive)</title>
+  <title>3D Spacetime Warp (Interactive)</title>
   <style>
     :root { color-scheme: dark; }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: #0b0f1a;
-      color: #e8eefc;
-      display: grid;
-      grid-template-rows: auto 1fr;
-      height: 100vh;
+    body{
+      margin:0;
+      height:100vh;
+      display:grid;
+      grid-template-rows:auto 1fr;
+      background:#070b14;
+      color:#eaf2ff;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
-    header {
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      padding: 10px 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      background: rgba(15, 22, 40, 0.85);
+    header{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      padding:10px 12px;
+      background:rgba(15,22,40,0.85);
+      border-bottom:1px solid rgba(255,255,255,0.10);
       backdrop-filter: blur(10px);
-      flex-wrap: wrap;
     }
-    .group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .btn {
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.06);
-      color: inherit;
-      padding: 8px 10px;
-      border-radius: 10px;
-      cursor: pointer;
-      user-select: none;
+    .group{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    label{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(255,255,255,0.05);
     }
-    .btn:hover { background: rgba(255,255,255,0.10); }
-    .btn:active { transform: translateY(1px); }
-    label {
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.05);
-      padding: 6px 10px;
-      border-radius: 10px;
+    input[type="range"]{ width:180px; }
+    .btn{
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.06);
+      color:inherit;
+      cursor:pointer;
+      user-select:none;
     }
-    input[type="range"] { width: 160px; }
-    .hint { opacity: 0.8; font-size: 0.92rem; }
-    canvas { width: 100%; height: 100%; display: block; }
-    .badge {
-      font-size: 12px;
-      padding: 3px 8px;
-      border-radius: 999px;
-      background: rgba(123, 190, 255, 0.15);
-      border: 1px solid rgba(123, 190, 255, 0.25);
-      color: #bfe1ff;
+    .btn:hover{ background:rgba(255,255,255,0.10); }
+    .hint{ opacity:0.85; font-size:0.92rem; }
+    canvas{ width:100%; height:100%; display:block; }
+    .badge{
+      font-size:12px;
+      padding:3px 8px;
+      border-radius:999px;
+      background:rgba(123,190,255,0.14);
+      border:1px solid rgba(123,190,255,0.25);
+      color:#cfe8ff;
     }
   </style>
 </head>
 <body>
   <header>
     <div class="group">
-      <button class="btn" id="addMass">+ Add mass</button>
-      <button class="btn" id="removeMass">– Remove mass</button>
-      <button class="btn" id="reset">Reset</button>
-      <span class="badge" id="massCount"></span>
+      <button class="btn" id="reset">Reset view</button>
+      <span class="badge">Drag the mass • Drag empty space to rotate • Scroll to zoom</span>
     </div>
 
     <div class="group">
-      <label title="Overall warping strength (think: how strong gravity is in this visualization)">
+      <label title="Change the mass (bigger = deeper 'well')">
+        Mass
+        <input id="mass" type="range" min="0.2" max="8" step="0.01" value="2.5" />
+        <span id="massVal"></span>
+      </label>
+
+      <label title="Overall warping strength (visual scale)">
         Warp strength
-        <input id="strength" type="range" min="0" max="200" value="90" />
+        <input id="strength" type="range" min="50" max="700" step="1" value="420" />
         <span id="strengthVal"></span>
       </label>
 
-      <label title="How fine the grid is">
+      <label title="Grid spacing (bigger = fewer lines, faster)">
         Grid spacing
-        <input id="spacing" type="range" min="16" max="80" value="40" />
+        <input id="spacing" type="range" min="18" max="70" step="1" value="34" />
         <span id="spacingVal"></span>
       </label>
 
-      <label title="Softening prevents infinite warps at the center; larger softening = smoother near masses">
+      <label title="Softening prevents an infinite spike at the center (bigger = smoother)">
         Softening
-        <input id="softening" type="range" min="5" max="60" value="22" />
+        <input id="softening" type="range" min="8" max="80" step="1" value="26" />
         <span id="softeningVal"></span>
       </label>
     </div>
 
-    <div class="hint">
-      Drag masses. Scroll/trackpad to zoom (optional). Click empty space to add a small mass.
-    </div>
+    <div class="hint">This is a visual model: the grid is a 3D “rubber sheet” displaced by a gravity-like potential.</div>
   </header>
 
   <canvas id="c"></canvas>
 
   <script>
-    // ====== Canvas setup (HiDPI) ======
-    const canvas = document.getElementById('c');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
 
-    function resize() {
+    // HiDPI
+    function resize(){
       const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = Math.floor(rect.width * dpr);
-      canvas.height = Math.floor(rect.height * dpr);
+      const r = canvas.getBoundingClientRect();
+      canvas.width = Math.floor(r.width * dpr);
+      canvas.height = Math.floor(r.height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
     }
-    window.addEventListener('resize', resize);
+    window.addEventListener("resize", resize);
     resize();
 
-    // ====== Controls ======
-    const strengthEl = document.getElementById('strength');
-    const spacingEl = document.getElementById('spacing');
-    const softeningEl = document.getElementById('softening');
-    const strengthVal = document.getElementById('strengthVal');
-    const spacingVal = document.getElementById('spacingVal');
-    const softeningVal = document.getElementById('softeningVal');
-    const massCount = document.getElementById('massCount');
+    // UI
+    const massEl = document.getElementById("mass");
+    const strengthEl = document.getElementById("strength");
+    const spacingEl = document.getElementById("spacing");
+    const softeningEl = document.getElementById("softening");
+    const massVal = document.getElementById("massVal");
+    const strengthVal = document.getElementById("strengthVal");
+    const spacingVal = document.getElementById("spacingVal");
+    const softeningVal = document.getElementById("softeningVal");
 
-    function updateLabels() {
+    function updateLabels(){
+      massVal.textContent = (+massEl.value).toFixed(2);
       strengthVal.textContent = strengthEl.value;
-      spacingVal.textContent = spacingEl.value + 'px';
-      softeningVal.textContent = softeningEl.value + 'px';
-      massCount.textContent = `${masses.length} mass${masses.length === 1 ? '' : 'es'}`;
+      spacingVal.textContent = spacingEl.value + "px";
+      softeningVal.textContent = softeningEl.value + "px";
     }
-    [strengthEl, spacingEl, softeningEl].forEach(el => el.addEventListener('input', updateLabels));
+    [massEl, strengthEl, spacingEl, softeningEl].forEach(el => el.addEventListener("input", updateLabels));
+    updateLabels();
 
-    // ====== Simple "spacetime warp" model ======
-    // We draw a grid of lines. Each grid point is displaced by a sum of mass-induced fields:
-    // displacement vector at position p:
-    //   d = Σ [ -k * m * (p - mi) / (|p - mi|^2 + s^2) ]
-    // This is not GR, but it *looks* like curvature/warping and is interactive + stable.
-    //
-    // -k controls overall "warp strength"
-    // s is softening to prevent singularities
-    // m is a slider-per-mass value
+    // One mass (draggable)
+    const mass = { x: 0, y: 0, m: +massEl.value };
 
-    const masses = [];
-    let zoom = 1;
-
-    function resetMasses() {
-      masses.length = 0;
+    function resetMassPos(){
       const w = canvas.clientWidth, h = canvas.clientHeight;
-      masses.push({ x: w*0.38, y: h*0.52, m: 1.4 });
-      masses.push({ x: w*0.65, y: h*0.45, m: 0.9 });
-      updateLabels();
+      mass.x = w * 0.52;
+      mass.y = h * 0.48;
     }
-    resetMasses();
+    resetMassPos();
 
-    // Add/remove buttons
-    document.getElementById('addMass').addEventListener('click', () => {
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      masses.push({ x: w*(0.3+0.4*Math.random()), y: h*(0.3+0.4*Math.random()), m: 0.8+1.2*Math.random() });
-      updateLabels();
-    });
-    document.getElementById('removeMass').addEventListener('click', () => {
-      masses.pop();
-      updateLabels();
-    });
-    document.getElementById('reset').addEventListener('click', () => {
-      zoom = 1;
-      resetMasses();
+    // "3D camera"
+    let cam = {
+      yaw: -0.9,       // rotation around vertical axis
+      pitch: 0.95,     // tilt
+      zoom: 1.0,       // zoom factor
+      dist: 680        // perspective distance
+    };
+
+    document.getElementById("reset").addEventListener("click", () => {
+      cam.yaw = -0.9;
+      cam.pitch = 0.95;
+      cam.zoom = 1.0;
+      resetMassPos();
     });
 
-    // ====== Interaction: drag masses + click to add ======
-    let dragging = null;
+    // Interaction: drag mass OR rotate
+    let pointerDown = false;
+    let draggingMass = false;
+    let last = { x: 0, y: 0 };
     let dragOffset = { x: 0, y: 0 };
 
-    function pointerPos(ev) {
-      const rect = canvas.getBoundingClientRect();
-      return { x: (ev.clientX - rect.left), y: (ev.clientY - rect.top) };
+    function pos(ev){
+      const r = canvas.getBoundingClientRect();
+      return { x: ev.clientX - r.left, y: ev.clientY - r.top };
     }
 
-    function hitTestMass(p) {
-      // screen-space radius scales a bit with mass
-      for (let i = masses.length - 1; i >= 0; i--) {
-        const mm = masses[i];
-        const r = 10 + 10 * Math.sqrt(mm.m);
-        const dx = p.x - mm.x, dy = p.y - mm.y;
-        if (dx*dx + dy*dy <= r*r) return i;
-      }
-      return -1;
+    function hitMass(p){
+      const r = 16 + 7 * Math.sqrt(+massEl.value);
+      const dx = p.x - mass.x, dy = p.y - mass.y;
+      return (dx*dx + dy*dy) <= r*r;
     }
 
-    canvas.addEventListener('pointerdown', (ev) => {
+    canvas.addEventListener("pointerdown", (ev) => {
       canvas.setPointerCapture(ev.pointerId);
-      const p = pointerPos(ev);
-      const idx = hitTestMass(p);
-      if (idx >= 0) {
-        dragging = idx;
-        dragOffset.x = p.x - masses[idx].x;
-        dragOffset.y = p.y - masses[idx].y;
+      pointerDown = true;
+      const p = pos(ev);
+      last = p;
+      if (hitMass(p)){
+        draggingMass = true;
+        dragOffset.x = p.x - mass.x;
+        dragOffset.y = p.y - mass.y;
       } else {
-        // Click empty space: add a small mass
-        masses.push({ x: p.x, y: p.y, m: 0.7 });
-        updateLabels();
+        draggingMass = false; // rotate
       }
     });
 
-    canvas.addEventListener('pointermove', (ev) => {
-      if (dragging == null) return;
-      const p = pointerPos(ev);
-      masses[dragging].x = p.x - dragOffset.x;
-      masses[dragging].y = p.y - dragOffset.y;
+    canvas.addEventListener("pointermove", (ev) => {
+      if (!pointerDown) return;
+      const p = pos(ev);
+      const dx = p.x - last.x;
+      const dy = p.y - last.y;
+      last = p;
+
+      if (draggingMass){
+        mass.x = p.x - dragOffset.x;
+        mass.y = p.y - dragOffset.y;
+      } else {
+        cam.yaw += dx * 0.006;
+        cam.pitch += dy * 0.006;
+        cam.pitch = Math.max(0.15, Math.min(1.35, cam.pitch));
+      }
     });
 
-    canvas.addEventListener('pointerup', () => { dragging = null; });
-    canvas.addEventListener('pointercancel', () => { dragging = null; });
+    canvas.addEventListener("pointerup", () => { pointerDown = false; draggingMass = false; });
+    canvas.addEventListener("pointercancel", () => { pointerDown = false; draggingMass = false; });
 
-    // Optional zoom with wheel (keeps it simple: zoom the "field strength" feel + grid density visually)
-    canvas.addEventListener('wheel', (ev) => {
-      ev.preventDefault();
-      const delta = Math.sign(ev.deltaY);
-      zoom *= (delta > 0) ? 0.92 : 1.08;
-      zoom = Math.max(0.55, Math.min(2.2, zoom));
-    }, { passive: false });
-
-    // ====== Rendering ======
-    function warpPoint(x, y, k, s) {
-      let dx = 0, dy = 0;
-      for (const mm of masses) {
-        const vx = x - mm.x;
-        const vy = y - mm.y;
-        const r2 = vx*vx + vy*vy + s*s;
-        // Inverse-square-ish with softening; scaled by mass
-        const f = -k * mm.m / r2;
-        dx += f * vx;
-        dy += f * vy;
-      }
-      return { x: x + dx, y: y + dy };
-    }
-
-    function drawGrid() {
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-
-      // Controls -> parameters
-      const baseSpacing = +spacingEl.value;
-      const spacing = baseSpacing * zoom;
-      const k = (+strengthEl.value) * 0.65 * zoom; // "warp strength"
-      const s = +softeningEl.value;
-
-      // Background
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#070b14';
-      ctx.fillRect(0, 0, w, h);
-
-      // A subtle radial glow
-      const g = ctx.createRadialGradient(w*0.5, h*0.45, 20, w*0.5, h*0.45, Math.max(w,h)*0.75);
-      g.addColorStop(0, 'rgba(85,150,255,0.10)');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-
-      // Grid style
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(170, 210, 255, 0.16)';
-
-      // We sample each grid line as a polyline.
-      // More samples => smoother but heavier. We'll adapt based on spacing.
-      const step = Math.max(6, Math.min(16, spacing / 3));
-
-      // Vertical lines
-      for (let gx = Math.floor(0 / spacing) * spacing; gx <= w; gx += spacing) {
-        ctx.beginPath();
-        let first = true;
-        for (let y = 0; y <= h; y += step) {
-          const p = warpPoint(gx, y, k, s);
-          if (first) { ctx.moveTo(p.x, p.y); first = false; }
-          else ctx.lineTo(p.x, p.y);
-        }
-        ctx.stroke();
-      }
-
-      // Horizontal lines
-      for (let gy = Math.floor(0 / spacing) * spacing; gy <= h; gy += spacing) {
-        ctx.beginPath();
-        let first = true;
-        for (let x = 0; x <= w; x += step) {
-          const p = warpPoint(x, gy, k, s);
-          if (first) { ctx.moveTo(p.x, p.y); first = false; }
-          else ctx.lineTo(p.x, p.y);
-        }
-        ctx.stroke();
-      }
-
-      // Draw masses on top
-      for (let i = 0; i < masses.length; i++) {
-        const mm = masses[i];
-        const r = 10 + 10 * Math.sqrt(mm.m);
-
-        // Accretion-like rings
-        ctx.beginPath();
-        ctx.arc(mm.x, mm.y, r*1.55, 0, Math.PI*2);
-        ctx.strokeStyle = 'rgba(123, 190, 255, 0.18)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Core
-        ctx.beginPath();
-        ctx.arc(mm.x, mm.y, r, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(10, 14, 24, 0.95)';
-        ctx.fill();
-
-        // Rim highlight
-        ctx.beginPath();
-        ctx.arc(mm.x, mm.y, r, 0, Math.PI*2);
-        ctx.strokeStyle = 'rgba(210, 235, 255, 0.40)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // Label mass value
-        ctx.font = '12px system-ui, sans-serif';
-        ctx.fillStyle = 'rgba(225, 240, 255, 0.85)';
-        ctx.fillText(`m=${mm.m.toFixed(2)}`, mm.x + r + 8, mm.y + 4);
-      }
-
-      // Title/legend
-      ctx.font = '13px system-ui, sans-serif';
-      ctx.fillStyle = 'rgba(230, 240, 255, 0.65)';
-      ctx.fillText('Drag masses to see the grid (spacetime) warp', 12, 22);
-    }
-
-    // Animate (keeps it smooth while dragging)
-    function tick() {
-      drawGrid();
-      requestAnimationFrame(tick);
-    }
-    updateLabels();
-    tick();
-
-    // ====== Extra: keyboard shortcuts to tweak selected mass ======
-    // If you want per-mass control: hold Shift and scroll over a mass (simple)
-    canvas.addEventListener('wheel', (ev) => {
-      if (!ev.shiftKey) return;
-      const p = pointerPos(ev);
-      const idx = hitTestMass(p);
-      if (idx < 0) return;
+    // Zoom
+    canvas.addEventListener("wheel", (ev) => {
       ev.preventDefault();
       const dir = Math.sign(ev.deltaY);
-      masses[idx].m *= (dir > 0) ? 0.92 : 1.08;
-      masses[idx].m = Math.max(0.2, Math.min(6, masses[idx].m));
-    }, { passive: false });
+      cam.zoom *= (dir > 0) ? 0.92 : 1.08;
+      cam.zoom = Math.max(0.55, Math.min(2.4, cam.zoom));
+    }, { passive:false });
+
+    // --- 3D math ---
+    // World coordinates:
+    // X: left/right, Y: forward/back (into screen), Z: up (we will DISPLACE downwards: negative Z).
+    // We map screen plane points into a world grid centered at origin.
+    // Then we displace Z using a potential-like function around the mass (in the same plane).
+    function rotateY(v, a){
+      const ca = Math.cos(a), sa = Math.sin(a);
+      return { x: v.x * ca + v.z * sa, y: v.y, z: -v.x * sa + v.z * ca };
+    }
+    function rotateX(v, a){
+      const ca = Math.cos(a), sa = Math.sin(a);
+      return { x: v.x, y: v.y * ca - v.z * sa, z: v.y * sa + v.z * ca };
+    }
+
+    function project(v, w, h){
+      // camera looks at origin; move world "away" a bit for nicer perspective
+      const vz = v.z + 220; // shift up so sheet isn't fully below camera
+      const d = cam.dist / cam.zoom;
+      const s = d / (d + vz);
+      return {
+        x: w/2 + v.x * s,
+        y: h/2 + v.y * s,
+        s
+      };
+    }
+
+    // Compute sheet displacement (stronger warp)
+    // z = -A * m / sqrt(r^2 + soft^2)
+    // (negative z means "downward dent")
+    function sheetZ(wx, wy){
+      const soft = +softeningEl.value;
+      const A = +strengthEl.value; // stronger by design vs original
+      const m = +massEl.value;
+
+      // mass position in world coords:
+      // We convert mass screen position to world coordinates by reversing the same mapping we use for the grid.
+      // Simpler: keep mass in "screen world" coords directly:
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      const scale = 1.0 / (Math.max(w,h) / 520); // world units per pixel-ish
+      const mx = (mass.x - w/2) * scale;
+      const my = (mass.y - h/2) * scale;
+
+      const dx = wx - mx;
+      const dy = wy - my;
+      const r2 = dx*dx + dy*dy;
+      return -(A * m) / Math.sqrt(r2 + soft*soft);
+    }
+
+    function draw(){
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+
+      // background
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle = "#070b14";
+      ctx.fillRect(0,0,w,h);
+
+      // soft glow behind
+      const g = ctx.createRadialGradient(w*0.5, h*0.45, 30, w*0.5, h*0.45, Math.max(w,h)*0.8);
+      g.addColorStop(0, "rgba(110,170,255,0.12)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,w,h);
+
+      // world scaling: map pixels -> world units
+      const worldScale = 1.0 / (Math.max(w,h) / 520); // ~520 world units across the shorter side
+      const spacingPx = +spacingEl.value;
+      const spacingW = spacingPx * worldScale;
+
+      // grid extents in world units
+      const halfW = (w/2) * worldScale;
+      const halfH = (h/2) * worldScale;
+
+      // sampling step along lines (smaller = smoother)
+      const stepPx = Math.max(6, Math.min(14, spacingPx / 3));
+      const stepW = stepPx * worldScale;
+
+      // precompute camera rotation (apply to sheet points)
+      const yaw = cam.yaw;
+      const pitch = cam.pitch;
+
+      // draw mesh lines with a slight depth-based alpha
+      ctx.lineWidth = 1;
+
+      function drawPolyline(points){
+        if (points.length < 2) return;
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i=1;i<points.length;i++) ctx.lineTo(points[i].x, points[i].y);
+        ctx.stroke();
+      }
+
+      // Vertical lines (constant x, varying y)
+      for (let x = -halfW; x <= halfW; x += spacingW){
+        const pts = [];
+        for (let y = -halfH; y <= halfH; y += stepW){
+          const z = sheetZ(x, y);
+
+          // sheet point in 3D
+          let v = { x, y, z };
+
+          // rotate sheet to view in 3D
+          v = rotateY(v, yaw);
+          v = rotateX(v, pitch);
+
+          const p = project(v, w, h);
+          pts.push({ x: p.x, y: p.y, s: p.s, z: v.z });
+        }
+
+        // depth shading (approx): farther lines fainter
+        const mid = pts[(pts.length/2)|0];
+        const alpha = 0.10 + 0.18 * Math.max(0.0, Math.min(1.0, mid.s));
+        ctx.strokeStyle = `rgba(170,220,255,${alpha})`;
+        drawPolyline(pts);
+      }
+
+      // Horizontal lines (constant y, varying x)
+      for (let y = -halfH; y <= halfH; y += spacingW){
+        const pts = [];
+        for (let x = -halfW; x <= halfW; x += stepW){
+          const z = sheetZ(x, y);
+          let v = { x, y, z };
+          v = rotateY(v, yaw);
+          v = rotateX(v, pitch);
+          const p = project(v, w, h);
+          pts.push({ x: p.x, y: p.y, s: p.s, z: v.z });
+        }
+        const mid = pts[(pts.length/2)|0];
+        const alpha = 0.10 + 0.18 * Math.max(0.0, Math.min(1.0, mid.s));
+        ctx.strokeStyle = `rgba(170,220,255,${alpha})`;
+        drawPolyline(pts);
+      }
+
+      // Draw the mass marker (screen space), plus a "well" hint
+      mass.m = +massEl.value;
+
+      const r = 16 + 7 * Math.sqrt(mass.m);
+      // outer glow
+      ctx.beginPath();
+      ctx.arc(mass.x, mass.y, r*2.0, 0, Math.PI*2);
+      ctx.fillStyle = "rgba(120,190,255,0.10)";
+      ctx.fill();
+
+      // photon-ring style rim
+      ctx.beginPath();
+      ctx.arc(mass.x, mass.y, r*1.35, 0, Math.PI*2);
+      ctx.strokeStyle = "rgba(180,230,255,0.25)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // core
+      ctx.beginPath();
+      ctx.arc(mass.x, mass.y, r, 0, Math.PI*2);
+      ctx.fillStyle = "rgba(5,7,12,0.98)";
+      ctx.fill();
+
+      // highlight rim
+      ctx.beginPath();
+      ctx.arc(mass.x, mass.y, r, 0, Math.PI*2);
+      ctx.strokeStyle = "rgba(230,245,255,0.45)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // label
+      ctx.font = "13px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(230,240,255,0.80)";
+      ctx.fillText(`Mass m = ${mass.m.toFixed(2)}`, mass.x + r + 10, mass.y + 5);
+
+      // small legend
+      ctx.font = "13px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(230,240,255,0.65)";
+      ctx.fillText("3D sheet view: rotate (drag empty space), zoom (scroll), drag mass", 12, 22);
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
   </script>
 </body>
 </html>
