@@ -66,6 +66,7 @@
   <header>
     <div class="group">
       <span class="badge">Drag the mass • Use slider to change mass • Scroll to zoom</span>
+      <span class="badge" id="softBadge" title="Fixed softening (prevents infinite spike at the center)"></span>
     </div>
 
     <div class="group" id="presets">
@@ -122,6 +123,11 @@
     const depthVal = document.getElementById("depthVal");
     const spacingVal = document.getElementById("spacingVal");
     const titleHint = document.getElementById("titleHint");
+    const softBadge = document.getElementById("softBadge");
+
+    // Fixed softening value (world units). Increase to make the center less sharp.
+    const SOFTENING = 0.18;
+    softBadge.textContent = `Softening: ${SOFTENING}`;
 
     function updateLabels(){
       massVal.textContent = (+massEl.value).toFixed(2);
@@ -148,21 +154,20 @@
     presetBtns.forEach(btn => btn.addEventListener("click", () => setPreset(btn)));
     setPreset(presetBtns[0]);
 
-    // Mass point (draggable on the surface)
-    const mass = { sx: 0, sy: 0 }; // screen position
+    // Mass point (draggable)
+    const mass = { sx: 0, sy: 0 };
     function centerMass(){
       mass.sx = canvas.clientWidth * 0.25;
       mass.sy = canvas.clientHeight * 0.30;
     }
     centerMass();
 
-    // Camera fixed like the reference image (no user-rotation).
-    // World axes: X (left-right), Y (forward/back), Z (up).
-    // Surface sits near Z=0 and dips down (negative Z) into a funnel.
+    // Camera: oriented like the reference image (no sideways slant)
+    // yaw=0 => symmetric, not rotated to the side; pitch tilts down to show depth.
     const cam = {
-      yaw: -0.75,     // rotate around vertical
-      pitch: 1.05,    // tilt down
-      dist: 820,
+      yaw: 0.0,
+      pitch: 1.08,
+      dist: 860,
       zoom: 1.0
     };
 
@@ -186,7 +191,6 @@
       const dx = p.x - mass.sx, dy = p.y - mass.sy;
       return (dx*dx + dy*dy) <= r*r;
     }
-
     canvas.addEventListener("pointerdown", (ev) => {
       canvas.setPointerCapture(ev.pointerId);
       const p = pos(ev);
@@ -215,7 +219,6 @@
       return { x: v.x, y: v.y * ca - v.z * sa, z: v.y * sa + v.z * ca };
     }
     function project(v, w, h){
-      // push surface "down" a bit so top plane reads clearly
       const vz = v.z + 170;
       const d = cam.dist / cam.zoom;
       const s = d / (d + vz);
@@ -225,19 +228,16 @@
     // Convert screen mass location -> world coords on the plane (approx)
     function screenToWorldOnPlane(){
       const w = canvas.clientWidth, h = canvas.clientHeight;
-      const worldScale = 1.0 / (Math.max(w,h) / 560); // units per pixel-ish
+      const worldScale = 1.0 / (Math.max(w,h) / 560);
       return {
         x: (mass.sx - w/2) * worldScale,
         y: (mass.sy - h/2) * worldScale
       };
     }
 
-    // Funnel surface: no "softening slider", but we still use a tiny EPS to avoid division-by-zero.
-    // To look like the reference “tube”, we:
-    //  - use 1/(r+eps) to make it very steep near the center
-    //  - clamp the minimum Z so it becomes a long vertical throat visually
-    const EPS = 1e-4;
-
+    // Funnel surface with fixed softening:
+    // z = -(A*M) / sqrt(r^2 + a^2)
+    // Then clamp to create a long throat like the reference.
     function surfaceZ(wx, wy){
       const M = +massEl.value;
       const A = +depthEl.value;
@@ -245,12 +245,11 @@
       const mpos = screenToWorldOnPlane();
       const dx = wx - mpos.x;
       const dy = wy - mpos.y;
-      const r = Math.sqrt(dx*dx + dy*dy);
+      const r2 = dx*dx + dy*dy;
 
-      // Very strong warping near center
-      let z = -(A * M) / (r + EPS);
+      let z = -(A * M) / Math.sqrt(r2 + SOFTENING*SOFTENING);
 
-      // Clamp to create that long “black hole throat” look (like the image)
+      // Long vertical “tube” feel like the black hole image
       const zMin = -3200;
       if (z < zMin) z = zMin;
 
@@ -266,7 +265,7 @@
       ctx.fillRect(0,0,w,h);
 
       // Subtle glow
-      const glow = ctx.createRadialGradient(w*0.35, h*0.20, 30, w*0.35, h*0.20, Math.max(w,h)*0.9);
+      const glow = ctx.createRadialGradient(w*0.50, h*0.18, 30, w*0.50, h*0.18, Math.max(w,h)*0.9);
       glow.addColorStop(0, "rgba(120,190,255,0.10)");
       glow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = glow;
@@ -277,25 +276,24 @@
       const spacingPx = +spacingEl.value;
       const spacingW = spacingPx * worldScale;
 
-      // Make a wide “sheet” like the reference: extend more in X than Y
+      // Wide “sheet” like reference
       const halfW = (w/2) * worldScale * 1.05;
       const halfH = (h/2) * worldScale * 0.70;
 
-      // Sampling step along each line
+      // Sampling
       const stepPx = Math.max(6, Math.min(14, spacingPx / 3));
       const stepW = stepPx * worldScale;
 
-      // Fixed camera angles (like photo)
-      const yaw = cam.yaw;
-      const pitch = cam.pitch;
+      // Camera angles
+      const yaw = cam.yaw;     // 0 => not slanted sideways
+      const pitch = cam.pitch; // still tilted down to show the funnel
 
-      // Draw the top plane outline (a “frame” like the picture)
+      // Frame outline (top plane border)
       function frameCorner(wx, wy){
         let v = { x: wx, y: wy, z: 0 };
         v = rotateY(v, yaw);
         v = rotateX(v, pitch);
-        const p = project(v, w, h);
-        return p;
+        return project(v, w, h);
       }
       const p1 = frameCorner(-halfW, -halfH);
       const p2 = frameCorner( halfW, -halfH);
@@ -326,7 +324,6 @@
         ctx.stroke();
       }
 
-      // Vertical-ish lines (constant x)
       for (let x = -halfW; x <= halfW; x += spacingW){
         const pts = [];
         for (let y = -halfH; y <= halfH; y += stepW){
@@ -334,15 +331,12 @@
           let v = { x, y, z };
           v = rotateY(v, yaw);
           v = rotateX(v, pitch);
-          const p = project(v, w, h);
-          pts.push(p);
+          pts.push(project(v, w, h));
         }
-        // Slightly emphasize central region lines for the “funnel” look
         const stroke = (Math.abs(x) < spacingW*0.8) ? baseColor : faintColor;
         drawPolyline(pts, stroke);
       }
 
-      // Horizontal-ish lines (constant y)
       for (let y = -halfH; y <= halfH; y += spacingW){
         const pts = [];
         for (let x = -halfW; x <= halfW; x += stepW){
@@ -350,56 +344,48 @@
           let v = { x, y, z };
           v = rotateY(v, yaw);
           v = rotateX(v, pitch);
-          const p = project(v, w, h);
-          pts.push(p);
+          pts.push(project(v, w, h));
         }
         const stroke = (Math.abs(y) < spacingW*0.8) ? baseColor : faintColor;
         drawPolyline(pts, stroke);
       }
 
-      // Mass marker (in screen space, like the picture’s sphere on the sheet)
+      // Mass marker (screen space)
       const M = +massEl.value;
 
-      // Color shifts with mass (sun -> blue -> black)
+      // Color shifts with mass (sun -> neutron -> black hole)
       function lerp(a,b,t){ return a + (b-a)*t; }
       function clamp01(t){ return Math.max(0, Math.min(1, t)); }
 
-      // t0: 0..1 for "sun to neutron"; t1: 0..1 for "neutron to black hole"
       const t0 = clamp01((M - 1.2) / (4.0 - 1.2));
       const t1 = clamp01((M - 4.0) / (12.0 - 4.0));
 
-      // Start warm (sun)
-      let r = lerp(255, 80, t0);
-      let g = lerp(190, 200, t0);
-      let b = lerp( 60, 255, t0);
+      let rr = lerp(255, 80, t0);
+      let gg = lerp(190, 200, t0);
+      let bb = lerp( 60, 255, t0);
 
-      // Then darken to black hole
-      r = lerp(r, 10, t1);
-      g = lerp(g, 10, t1);
-      b = lerp(b, 10, t1);
+      rr = lerp(rr, 10, t1);
+      gg = lerp(gg, 10, t1);
+      bb = lerp(bb, 10, t1);
 
       const radius = 16 + 7 * Math.sqrt(M);
 
-      // Outer glow
       ctx.beginPath();
       ctx.arc(mass.sx, mass.sy, radius*2.0, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(${r},${g},${b},0.10)`;
+      ctx.fillStyle = `rgba(${rr|0},${gg|0},${bb|0},0.10)`;
       ctx.fill();
 
-      // Sphere
       ctx.beginPath();
       ctx.arc(mass.sx, mass.sy, radius, 0, Math.PI*2);
-      ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+      ctx.fillStyle = `rgb(${rr|0},${gg|0},${bb|0})`;
       ctx.fill();
 
-      // Highlight rim
       ctx.beginPath();
       ctx.arc(mass.sx, mass.sy, radius, 0, Math.PI*2);
       ctx.strokeStyle = "rgba(255,255,255,0.35)";
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Label
       ctx.font = "14px system-ui, sans-serif";
       ctx.fillStyle = "rgba(230,240,255,0.78)";
       ctx.fillText(`m = ${M.toFixed(2)}`, mass.sx + radius + 10, mass.sy + 5);
@@ -411,3 +397,4 @@
   </script>
 </body>
 </html>
+
