@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D Spacetime Warp (Interactive)</title>
+  <title>Spacetime Funnel (Interactive)</title>
   <style>
     :root { color-scheme: dark; }
     body{
@@ -11,14 +11,14 @@
       height:100vh;
       display:grid;
       grid-template-rows:auto 1fr;
-      background:#070b14;
+      background:#061021;
       color:#eaf2ff;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
     header{
       display:flex;
       flex-wrap:wrap;
-      gap:12px;
+      gap:10px;
       align-items:center;
       padding:10px 12px;
       background:rgba(15,22,40,0.85);
@@ -26,16 +26,6 @@
       backdrop-filter: blur(10px);
     }
     .group{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    label{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:6px 10px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.12);
-      background:rgba(255,255,255,0.05);
-    }
-    input[type="range"]{ width:180px; }
     .btn{
       padding:8px 10px;
       border-radius:10px;
@@ -46,6 +36,20 @@
       user-select:none;
     }
     .btn:hover{ background:rgba(255,255,255,0.10); }
+    .btn.active{
+      background:rgba(130,200,255,0.16);
+      border-color:rgba(130,200,255,0.35);
+    }
+    label{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(255,255,255,0.05);
+    }
+    input[type="range"]{ width:180px; }
     .hint{ opacity:0.85; font-size:0.92rem; }
     canvas{ width:100%; height:100%; display:block; }
     .badge{
@@ -61,37 +65,36 @@
 <body>
   <header>
     <div class="group">
-      <button class="btn" id="reset">Reset view</button>
-      <span class="badge">Drag the mass • Drag empty space to rotate • Scroll to zoom</span>
+      <span class="badge">Drag the mass • Use slider to change mass • Scroll to zoom</span>
+    </div>
+
+    <div class="group" id="presets">
+      <button class="btn" data-m="1.2" data-name="Sun">Sun</button>
+      <button class="btn" data-m="4.0" data-name="Neutron star">Neutron star</button>
+      <button class="btn" data-m="12.0" data-name="Black hole">Black hole</button>
     </div>
 
     <div class="group">
-      <label title="Change the mass (bigger = deeper 'well')">
+      <label title="Bigger mass = deeper funnel">
         Mass
-        <input id="mass" type="range" min="0.2" max="8" step="0.01" value="2.5" />
+        <input id="mass" type="range" min="0.2" max="20" step="0.01" value="1.2" />
         <span id="massVal"></span>
       </label>
 
-      <label title="Overall warping strength (visual scale)">
-        Warp strength
-        <input id="strength" type="range" min="50" max="700" step="1" value="420" />
-        <span id="strengthVal"></span>
+      <label title="Overall funnel depth (visual scale)">
+        Depth
+        <input id="depth" type="range" min="150" max="2200" step="1" value="700" />
+        <span id="depthVal"></span>
       </label>
 
-      <label title="Grid spacing (bigger = fewer lines, faster)">
-        Grid spacing
-        <input id="spacing" type="range" min="18" max="70" step="1" value="34" />
+      <label title="Grid spacing">
+        Grid
+        <input id="spacing" type="range" min="16" max="70" step="1" value="34" />
         <span id="spacingVal"></span>
-      </label>
-
-      <label title="Softening prevents an infinite spike at the center (bigger = smoother)">
-        Softening
-        <input id="softening" type="range" min="8" max="80" step="1" value="26" />
-        <span id="softeningVal"></span>
       </label>
     </div>
 
-    <div class="hint">This is a visual model: the grid is a 3D “rubber sheet” displaced by a gravity-like potential.</div>
+    <div class="hint" id="titleHint">Preset: Sun</div>
   </header>
 
   <canvas id="c"></canvas>
@@ -106,107 +109,64 @@
       const r = canvas.getBoundingClientRect();
       canvas.width = Math.floor(r.width * dpr);
       canvas.height = Math.floor(r.height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     window.addEventListener("resize", resize);
     resize();
 
     // UI
     const massEl = document.getElementById("mass");
-    const strengthEl = document.getElementById("strength");
+    const depthEl = document.getElementById("depth");
     const spacingEl = document.getElementById("spacing");
-    const softeningEl = document.getElementById("softening");
     const massVal = document.getElementById("massVal");
-    const strengthVal = document.getElementById("strengthVal");
+    const depthVal = document.getElementById("depthVal");
     const spacingVal = document.getElementById("spacingVal");
-    const softeningVal = document.getElementById("softeningVal");
+    const titleHint = document.getElementById("titleHint");
 
     function updateLabels(){
       massVal.textContent = (+massEl.value).toFixed(2);
-      strengthVal.textContent = strengthEl.value;
+      depthVal.textContent = depthEl.value;
       spacingVal.textContent = spacingEl.value + "px";
-      softeningVal.textContent = softeningEl.value + "px";
     }
-    [massEl, strengthEl, spacingEl, softeningEl].forEach(el => el.addEventListener("input", updateLabels));
+    [massEl, depthEl, spacingEl].forEach(el => el.addEventListener("input", () => {
+      clearPresetActive();
+      titleHint.textContent = "Custom mass";
+      updateLabels();
+    }));
     updateLabels();
 
-    // One mass (draggable)
-    const mass = { x: 0, y: 0, m: +massEl.value };
-
-    function resetMassPos(){
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      mass.x = w * 0.52;
-      mass.y = h * 0.48;
+    // Presets
+    const presetBtns = [...document.querySelectorAll("#presets .btn")];
+    function clearPresetActive(){ presetBtns.forEach(b => b.classList.remove("active")); }
+    function setPreset(btn){
+      clearPresetActive();
+      btn.classList.add("active");
+      massEl.value = btn.dataset.m;
+      titleHint.textContent = `Preset: ${btn.dataset.name}`;
+      updateLabels();
     }
-    resetMassPos();
+    presetBtns.forEach(btn => btn.addEventListener("click", () => setPreset(btn)));
+    setPreset(presetBtns[0]);
 
-    // "3D camera"
-    let cam = {
-      yaw: -0.9,       // rotation around vertical axis
-      pitch: 0.95,     // tilt
-      zoom: 1.0,       // zoom factor
-      dist: 680        // perspective distance
+    // Mass point (draggable on the surface)
+    const mass = { sx: 0, sy: 0 }; // screen position
+    function centerMass(){
+      mass.sx = canvas.clientWidth * 0.25;
+      mass.sy = canvas.clientHeight * 0.30;
+    }
+    centerMass();
+
+    // Camera fixed like the reference image (no user-rotation).
+    // World axes: X (left-right), Y (forward/back), Z (up).
+    // Surface sits near Z=0 and dips down (negative Z) into a funnel.
+    const cam = {
+      yaw: -0.75,     // rotate around vertical
+      pitch: 1.05,    // tilt down
+      dist: 820,
+      zoom: 1.0
     };
 
-    document.getElementById("reset").addEventListener("click", () => {
-      cam.yaw = -0.9;
-      cam.pitch = 0.95;
-      cam.zoom = 1.0;
-      resetMassPos();
-    });
-
-    // Interaction: drag mass OR rotate
-    let pointerDown = false;
-    let draggingMass = false;
-    let last = { x: 0, y: 0 };
-    let dragOffset = { x: 0, y: 0 };
-
-    function pos(ev){
-      const r = canvas.getBoundingClientRect();
-      return { x: ev.clientX - r.left, y: ev.clientY - r.top };
-    }
-
-    function hitMass(p){
-      const r = 16 + 7 * Math.sqrt(+massEl.value);
-      const dx = p.x - mass.x, dy = p.y - mass.y;
-      return (dx*dx + dy*dy) <= r*r;
-    }
-
-    canvas.addEventListener("pointerdown", (ev) => {
-      canvas.setPointerCapture(ev.pointerId);
-      pointerDown = true;
-      const p = pos(ev);
-      last = p;
-      if (hitMass(p)){
-        draggingMass = true;
-        dragOffset.x = p.x - mass.x;
-        dragOffset.y = p.y - mass.y;
-      } else {
-        draggingMass = false; // rotate
-      }
-    });
-
-    canvas.addEventListener("pointermove", (ev) => {
-      if (!pointerDown) return;
-      const p = pos(ev);
-      const dx = p.x - last.x;
-      const dy = p.y - last.y;
-      last = p;
-
-      if (draggingMass){
-        mass.x = p.x - dragOffset.x;
-        mass.y = p.y - dragOffset.y;
-      } else {
-        cam.yaw += dx * 0.006;
-        cam.pitch += dy * 0.006;
-        cam.pitch = Math.max(0.15, Math.min(1.35, cam.pitch));
-      }
-    });
-
-    canvas.addEventListener("pointerup", () => { pointerDown = false; draggingMass = false; });
-    canvas.addEventListener("pointercancel", () => { pointerDown = false; draggingMass = false; });
-
-    // Zoom
+    // Wheel zoom
     canvas.addEventListener("wheel", (ev) => {
       ev.preventDefault();
       const dir = Math.sign(ev.deltaY);
@@ -214,11 +174,38 @@
       cam.zoom = Math.max(0.55, Math.min(2.4, cam.zoom));
     }, { passive:false });
 
-    // --- 3D math ---
-    // World coordinates:
-    // X: left/right, Y: forward/back (into screen), Z: up (we will DISPLACE downwards: negative Z).
-    // We map screen plane points into a world grid centered at origin.
-    // Then we displace Z using a potential-like function around the mass (in the same plane).
+    // Drag interaction
+    let dragging = false;
+    let dragOff = { x:0, y:0 };
+    function pos(ev){
+      const r = canvas.getBoundingClientRect();
+      return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+    }
+    function hitMass(p){
+      const r = 16 + 7 * Math.sqrt(+massEl.value);
+      const dx = p.x - mass.sx, dy = p.y - mass.sy;
+      return (dx*dx + dy*dy) <= r*r;
+    }
+
+    canvas.addEventListener("pointerdown", (ev) => {
+      canvas.setPointerCapture(ev.pointerId);
+      const p = pos(ev);
+      if (hitMass(p)){
+        dragging = true;
+        dragOff.x = p.x - mass.sx;
+        dragOff.y = p.y - mass.sy;
+      }
+    });
+    canvas.addEventListener("pointermove", (ev) => {
+      if (!dragging) return;
+      const p = pos(ev);
+      mass.sx = p.x - dragOff.x;
+      mass.sy = p.y - dragOff.y;
+    });
+    canvas.addEventListener("pointerup", () => dragging = false);
+    canvas.addEventListener("pointercancel", () => dragging = false);
+
+    // --- 3D helpers ---
     function rotateY(v, a){
       const ca = Math.cos(a), sa = Math.sin(a);
       return { x: v.x * ca + v.z * sa, y: v.y, z: -v.x * sa + v.z * ca };
@@ -227,164 +214,195 @@
       const ca = Math.cos(a), sa = Math.sin(a);
       return { x: v.x, y: v.y * ca - v.z * sa, z: v.y * sa + v.z * ca };
     }
-
     function project(v, w, h){
-      // camera looks at origin; move world "away" a bit for nicer perspective
-      const vz = v.z + 220; // shift up so sheet isn't fully below camera
+      // push surface "down" a bit so top plane reads clearly
+      const vz = v.z + 170;
       const d = cam.dist / cam.zoom;
       const s = d / (d + vz);
+      return { x: w/2 + v.x * s, y: h/2 + v.y * s, s };
+    }
+
+    // Convert screen mass location -> world coords on the plane (approx)
+    function screenToWorldOnPlane(){
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      const worldScale = 1.0 / (Math.max(w,h) / 560); // units per pixel-ish
       return {
-        x: w/2 + v.x * s,
-        y: h/2 + v.y * s,
-        s
+        x: (mass.sx - w/2) * worldScale,
+        y: (mass.sy - h/2) * worldScale
       };
     }
 
-    // Compute sheet displacement (stronger warp)
-    // z = -A * m / sqrt(r^2 + soft^2)
-    // (negative z means "downward dent")
-    function sheetZ(wx, wy){
-      const soft = +softeningEl.value;
-      const A = +strengthEl.value; // stronger by design vs original
-      const m = +massEl.value;
+    // Funnel surface: no "softening slider", but we still use a tiny EPS to avoid division-by-zero.
+    // To look like the reference “tube”, we:
+    //  - use 1/(r+eps) to make it very steep near the center
+    //  - clamp the minimum Z so it becomes a long vertical throat visually
+    const EPS = 1e-4;
 
-      // mass position in world coords:
-      // We convert mass screen position to world coordinates by reversing the same mapping we use for the grid.
-      // Simpler: keep mass in "screen world" coords directly:
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      const scale = 1.0 / (Math.max(w,h) / 520); // world units per pixel-ish
-      const mx = (mass.x - w/2) * scale;
-      const my = (mass.y - h/2) * scale;
+    function surfaceZ(wx, wy){
+      const M = +massEl.value;
+      const A = +depthEl.value;
 
-      const dx = wx - mx;
-      const dy = wy - my;
-      const r2 = dx*dx + dy*dy;
-      return -(A * m) / Math.sqrt(r2 + soft*soft);
+      const mpos = screenToWorldOnPlane();
+      const dx = wx - mpos.x;
+      const dy = wy - mpos.y;
+      const r = Math.sqrt(dx*dx + dy*dy);
+
+      // Very strong warping near center
+      let z = -(A * M) / (r + EPS);
+
+      // Clamp to create that long “black hole throat” look (like the image)
+      const zMin = -3200;
+      if (z < zMin) z = zMin;
+
+      return z;
     }
 
     function draw(){
       const w = canvas.clientWidth, h = canvas.clientHeight;
-
-      // background
       ctx.clearRect(0,0,w,h);
-      ctx.fillStyle = "#070b14";
+
+      // Background
+      ctx.fillStyle = "#061021";
       ctx.fillRect(0,0,w,h);
 
-      // soft glow behind
-      const g = ctx.createRadialGradient(w*0.5, h*0.45, 30, w*0.5, h*0.45, Math.max(w,h)*0.8);
-      g.addColorStop(0, "rgba(110,170,255,0.12)");
-      g.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = g;
+      // Subtle glow
+      const glow = ctx.createRadialGradient(w*0.35, h*0.20, 30, w*0.35, h*0.20, Math.max(w,h)*0.9);
+      glow.addColorStop(0, "rgba(120,190,255,0.10)");
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
       ctx.fillRect(0,0,w,h);
 
-      // world scaling: map pixels -> world units
-      const worldScale = 1.0 / (Math.max(w,h) / 520); // ~520 world units across the shorter side
+      // World mapping
+      const worldScale = 1.0 / (Math.max(w,h) / 560);
       const spacingPx = +spacingEl.value;
       const spacingW = spacingPx * worldScale;
 
-      // grid extents in world units
-      const halfW = (w/2) * worldScale;
-      const halfH = (h/2) * worldScale;
+      // Make a wide “sheet” like the reference: extend more in X than Y
+      const halfW = (w/2) * worldScale * 1.05;
+      const halfH = (h/2) * worldScale * 0.70;
 
-      // sampling step along lines (smaller = smoother)
+      // Sampling step along each line
       const stepPx = Math.max(6, Math.min(14, spacingPx / 3));
       const stepW = stepPx * worldScale;
 
-      // precompute camera rotation (apply to sheet points)
+      // Fixed camera angles (like photo)
       const yaw = cam.yaw;
       const pitch = cam.pitch;
 
-      // draw mesh lines with a slight depth-based alpha
-      ctx.lineWidth = 1;
+      // Draw the top plane outline (a “frame” like the picture)
+      function frameCorner(wx, wy){
+        let v = { x: wx, y: wy, z: 0 };
+        v = rotateY(v, yaw);
+        v = rotateX(v, pitch);
+        const p = project(v, w, h);
+        return p;
+      }
+      const p1 = frameCorner(-halfW, -halfH);
+      const p2 = frameCorner( halfW, -halfH);
+      const p3 = frameCorner( halfW,  halfH);
+      const p4 = frameCorner(-halfW,  halfH);
 
-      function drawPolyline(points){
-        if (points.length < 2) return;
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(60,160,255,0.85)";
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.lineTo(p4.x, p4.y);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Grid
+      ctx.lineWidth = 1.5;
+      const baseColor = "rgba(60,160,255,0.70)";
+      const faintColor = "rgba(60,160,255,0.38)";
+
+      function drawPolyline(pts, strokeStyle){
+        if (pts.length < 2) return;
+        ctx.strokeStyle = strokeStyle;
         ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i=1;i<points.length;i++) ctx.lineTo(points[i].x, points[i].y);
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
         ctx.stroke();
       }
 
-      // Vertical lines (constant x, varying y)
+      // Vertical-ish lines (constant x)
       for (let x = -halfW; x <= halfW; x += spacingW){
         const pts = [];
         for (let y = -halfH; y <= halfH; y += stepW){
-          const z = sheetZ(x, y);
-
-          // sheet point in 3D
+          const z = surfaceZ(x, y);
           let v = { x, y, z };
-
-          // rotate sheet to view in 3D
           v = rotateY(v, yaw);
           v = rotateX(v, pitch);
-
           const p = project(v, w, h);
-          pts.push({ x: p.x, y: p.y, s: p.s, z: v.z });
+          pts.push(p);
         }
-
-        // depth shading (approx): farther lines fainter
-        const mid = pts[(pts.length/2)|0];
-        const alpha = 0.10 + 0.18 * Math.max(0.0, Math.min(1.0, mid.s));
-        ctx.strokeStyle = `rgba(170,220,255,${alpha})`;
-        drawPolyline(pts);
+        // Slightly emphasize central region lines for the “funnel” look
+        const stroke = (Math.abs(x) < spacingW*0.8) ? baseColor : faintColor;
+        drawPolyline(pts, stroke);
       }
 
-      // Horizontal lines (constant y, varying x)
+      // Horizontal-ish lines (constant y)
       for (let y = -halfH; y <= halfH; y += spacingW){
         const pts = [];
         for (let x = -halfW; x <= halfW; x += stepW){
-          const z = sheetZ(x, y);
+          const z = surfaceZ(x, y);
           let v = { x, y, z };
           v = rotateY(v, yaw);
           v = rotateX(v, pitch);
           const p = project(v, w, h);
-          pts.push({ x: p.x, y: p.y, s: p.s, z: v.z });
+          pts.push(p);
         }
-        const mid = pts[(pts.length/2)|0];
-        const alpha = 0.10 + 0.18 * Math.max(0.0, Math.min(1.0, mid.s));
-        ctx.strokeStyle = `rgba(170,220,255,${alpha})`;
-        drawPolyline(pts);
+        const stroke = (Math.abs(y) < spacingW*0.8) ? baseColor : faintColor;
+        drawPolyline(pts, stroke);
       }
 
-      // Draw the mass marker (screen space), plus a "well" hint
-      mass.m = +massEl.value;
+      // Mass marker (in screen space, like the picture’s sphere on the sheet)
+      const M = +massEl.value;
 
-      const r = 16 + 7 * Math.sqrt(mass.m);
-      // outer glow
+      // Color shifts with mass (sun -> blue -> black)
+      function lerp(a,b,t){ return a + (b-a)*t; }
+      function clamp01(t){ return Math.max(0, Math.min(1, t)); }
+
+      // t0: 0..1 for "sun to neutron"; t1: 0..1 for "neutron to black hole"
+      const t0 = clamp01((M - 1.2) / (4.0 - 1.2));
+      const t1 = clamp01((M - 4.0) / (12.0 - 4.0));
+
+      // Start warm (sun)
+      let r = lerp(255, 80, t0);
+      let g = lerp(190, 200, t0);
+      let b = lerp( 60, 255, t0);
+
+      // Then darken to black hole
+      r = lerp(r, 10, t1);
+      g = lerp(g, 10, t1);
+      b = lerp(b, 10, t1);
+
+      const radius = 16 + 7 * Math.sqrt(M);
+
+      // Outer glow
       ctx.beginPath();
-      ctx.arc(mass.x, mass.y, r*2.0, 0, Math.PI*2);
-      ctx.fillStyle = "rgba(120,190,255,0.10)";
+      ctx.arc(mass.sx, mass.sy, radius*2.0, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${r},${g},${b},0.10)`;
       ctx.fill();
 
-      // photon-ring style rim
+      // Sphere
       ctx.beginPath();
-      ctx.arc(mass.x, mass.y, r*1.35, 0, Math.PI*2);
-      ctx.strokeStyle = "rgba(180,230,255,0.25)";
+      ctx.arc(mass.sx, mass.sy, radius, 0, Math.PI*2);
+      ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+      ctx.fill();
+
+      // Highlight rim
+      ctx.beginPath();
+      ctx.arc(mass.sx, mass.sy, radius, 0, Math.PI*2);
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // core
-      ctx.beginPath();
-      ctx.arc(mass.x, mass.y, r, 0, Math.PI*2);
-      ctx.fillStyle = "rgba(5,7,12,0.98)";
-      ctx.fill();
-
-      // highlight rim
-      ctx.beginPath();
-      ctx.arc(mass.x, mass.y, r, 0, Math.PI*2);
-      ctx.strokeStyle = "rgba(230,245,255,0.45)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // label
-      ctx.font = "13px system-ui, sans-serif";
-      ctx.fillStyle = "rgba(230,240,255,0.80)";
-      ctx.fillText(`Mass m = ${mass.m.toFixed(2)}`, mass.x + r + 10, mass.y + 5);
-
-      // small legend
-      ctx.font = "13px system-ui, sans-serif";
-      ctx.fillStyle = "rgba(230,240,255,0.65)";
-      ctx.fillText("3D sheet view: rotate (drag empty space), zoom (scroll), drag mass", 12, 22);
+      // Label
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(230,240,255,0.78)";
+      ctx.fillText(`m = ${M.toFixed(2)}`, mass.sx + radius + 10, mass.sy + 5);
 
       requestAnimationFrame(draw);
     }
