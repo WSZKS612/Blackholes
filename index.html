@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Spacetime Warp</title>
+  <title>2D Spacetime Warp</title>
   <style>
     :root { color-scheme: dark; }
     *{ box-sizing:border-box; }
@@ -15,8 +15,6 @@
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
       overflow:hidden;
     }
-
-    /* Canvas fills screen */
     canvas{
       position:fixed;
       inset:0;
@@ -25,25 +23,24 @@
       display:block;
     }
 
-    /* Minimal controls: sliders + reset only */
+    /* Minimal UI: sliders + reset + star/BH toggle buttons */
     .ui{
       position:fixed;
       left:50%;
-      bottom:22px;
+      bottom:18px;
       transform:translateX(-50%);
-      width:min(780px, calc(100vw - 28px));
+      width:min(920px, calc(100vw - 28px));
       z-index:10;
       pointer-events:auto;
       display:flex;
       align-items:center;
-      gap:12px;
-      padding:12px 14px;
+      gap:10px;
+      padding:12px 12px;
       border-radius:16px;
       border:1px solid rgba(255,255,255,0.14);
       background:rgba(0,0,0,0.30);
       backdrop-filter: blur(10px);
     }
-
     .sliders{
       flex:1;
       display:grid;
@@ -51,7 +48,6 @@
       gap:10px;
       min-width:0;
     }
-
     label{
       display:flex;
       flex-direction:column;
@@ -73,10 +69,9 @@
       opacity:0.72;
       letter-spacing:0.08em;
     }
-
     .btn{
-      width:52px;
       height:52px;
+      padding:0 14px;
       border-radius:14px;
       border:1px solid rgba(255,255,255,0.18);
       background:rgba(0,0,0,0.25);
@@ -84,14 +79,20 @@
       cursor:pointer;
       display:grid;
       place-items:center;
-      font-size:20px;
+      font-size:14px;
+      letter-spacing:0.06em;
+      white-space:nowrap;
+      user-select:none;
     }
     .btn:hover{ background:rgba(255,255,255,0.06); }
+    .btn.active{
+      background:rgba(125,195,255,0.16);
+      border-color:rgba(125,195,255,0.35);
+    }
 
-    @media (max-width: 720px){
+    @media (max-width: 880px){
       .sliders{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .ui{ bottom:14px; }
-      .btn{ width:50px; height:50px; }
+      .btn{ height:48px; }
     }
   </style>
 </head>
@@ -109,31 +110,32 @@
 
     <label>
       Warp
-      <input id="strength" type="range" min="30" max="500" step="1" value="180" />
-      <div class="vals"><span id="strengthVal">180</span><span>k</span></div>
+      <input id="strength" type="range" min="10" max="420" step="1" value="150" />
+      <div class="vals"><span id="strengthVal">150</span><span>k</span></div>
     </label>
 
     <label>
       Softening
-      <input id="softening" type="range" min="6" max="70" step="1" value="26" />
-      <div class="vals"><span id="softeningVal">26</span><span>px</span></div>
+      <input id="softening" type="range" min="6" max="90" step="1" value="30" />
+      <div class="vals"><span id="softeningVal">30</span><span>px</span></div>
     </label>
 
     <label>
       Grid
-      <input id="spacing" type="range" min="18" max="70" step="1" value="34" />
-      <div class="vals"><span id="spacingVal">34</span><span>px</span></div>
+      <input id="spacing" type="range" min="18" max="85" step="1" value="40" />
+      <div class="vals"><span id="spacingVal">40</span><span>px</span></div>
     </label>
   </div>
 
-  <button class="btn" id="reset" title="Reset view">⟲</button>
+  <button class="btn" id="starBtn" title="Finite warp (softened)">Star</button>
+  <button class="btn" id="bhBtn" title="Infinite warp (visual singularity)">Black hole</button>
+  <button class="btn" id="reset" title="Reset view">Reset</button>
 </div>
 
 <script>
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
 
-  // HiDPI
   function resize(){
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     const r = canvas.getBoundingClientRect();
@@ -144,7 +146,7 @@
   window.addEventListener("resize", resize);
   resize();
 
-  // UI
+  // UI elements
   const massEl = document.getElementById("mass");
   const strengthEl = document.getElementById("strength");
   const softeningEl = document.getElementById("softening");
@@ -154,6 +156,19 @@
   const strengthVal = document.getElementById("strengthVal");
   const softeningVal = document.getElementById("softeningVal");
   const spacingVal = document.getElementById("spacingVal");
+
+  const starBtn = document.getElementById("starBtn");
+  const bhBtn = document.getElementById("bhBtn");
+  const resetBtn = document.getElementById("reset");
+
+  // Mode: "star" uses softening; "bh" ignores softening and approaches singularity
+  let mode = "star";
+  function setMode(newMode){
+    mode = newMode;
+    starBtn.classList.toggle("active", mode === "star");
+    bhBtn.classList.toggle("active", mode === "bh");
+  }
+  setMode("star");
 
   function updateLabels(){
     massVal.textContent = (+massEl.value).toFixed(2);
@@ -174,26 +189,17 @@
   }
   resetMassPos();
 
-  // Camera: angled toward viewer (like your reference), and wide plane fills screen
-  let cam = {
-    yaw: 0.04,
-    pitch: 0.72,  // tilt toward viewer
-    zoom: 1.0,
-    dist: 980
-  };
-
-  document.getElementById("reset").addEventListener("click", () => {
-    cam.yaw = 0.04;
-    cam.pitch = 0.72;
-    cam.zoom = 1.0;
+  resetBtn.addEventListener("click", () => {
+    setMode("star");
     resetMassPos();
   });
 
-  // Drag to move mass OR rotate plane (drag empty space)
-  let pointerDown = false;
-  let draggingMass = false;
-  let last = { x: 0, y: 0 };
-  let dragOffset = { x: 0, y: 0 };
+  starBtn.addEventListener("click", () => setMode("star"));
+  bhBtn.addEventListener("click", () => setMode("bh"));
+
+  // Drag mass
+  let dragging = false;
+  let dragOffset = {x:0,y:0};
 
   function pos(ev){
     const r = canvas.getBoundingClientRect();
@@ -207,94 +213,23 @@
 
   canvas.addEventListener("pointerdown", (ev) => {
     canvas.setPointerCapture(ev.pointerId);
-    pointerDown = true;
     const p = pos(ev);
-    last = p;
     if (hitMass(p)){
-      draggingMass = true;
+      dragging = true;
       dragOffset.x = p.x - mass.x;
       dragOffset.y = p.y - mass.y;
-    } else {
-      draggingMass = false;
     }
   });
-
   canvas.addEventListener("pointermove", (ev) => {
-    if (!pointerDown) return;
+    if (!dragging) return;
     const p = pos(ev);
-    const dx = p.x - last.x;
-    const dy = p.y - last.y;
-    last = p;
-
-    if (draggingMass){
-      mass.x = p.x - dragOffset.x;
-      mass.y = p.y - dragOffset.y;
-    } else {
-      cam.yaw += dx * 0.0048;
-      cam.pitch += dy * 0.0048;
-      cam.pitch = Math.max(0.52, Math.min(1.05, cam.pitch));
-    }
+    mass.x = p.x - dragOffset.x;
+    mass.y = p.y - dragOffset.y;
   });
+  canvas.addEventListener("pointerup", () => dragging = false);
+  canvas.addEventListener("pointercancel", () => dragging = false);
 
-  canvas.addEventListener("pointerup", () => { pointerDown = false; draggingMass = false; });
-  canvas.addEventListener("pointercancel", () => { pointerDown = false; draggingMass = false; });
-
-  // Wheel zoom
-  canvas.addEventListener("wheel", (ev) => {
-    ev.preventDefault();
-    const dir = Math.sign(ev.deltaY);
-    cam.zoom *= (dir > 0) ? 0.92 : 1.08;
-    cam.zoom = Math.max(0.55, Math.min(2.6, cam.zoom));
-  }, { passive:false });
-
-  // --- 3D math ---
-  function rotateY(v, a){
-    const ca = Math.cos(a), sa = Math.sin(a);
-    return { x: v.x * ca + v.z * sa, y: v.y, z: -v.x * sa + v.z * ca };
-  }
-  function rotateX(v, a){
-    const ca = Math.cos(a), sa = Math.sin(a);
-    return { x: v.x, y: v.y * ca - v.z * sa, z: v.y * sa + v.z * ca };
-  }
-  function project(v, w, h){
-    const vz = v.z + 290;          // lift the sheet so it reads across whole screen
-    const d = cam.dist / cam.zoom;
-    const s = d / (d + vz);
-    return { x: w/2 + v.x * s, y: h/2 + v.y * s, s };
-  }
-
-  // Warping with softening:
-  // z = -k * m / sqrt(r^2 + a^2)
-  function sheetZ(wx, wy){
-    const k = +strengthEl.value;
-    const m = +massEl.value;
-
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-
-    // IMPORTANT: choose scale so the plane fills the *entire* screen (like your reference)
-    const worldScale = 1.0 / (Math.max(w,h) / 820);
-
-    // softening in world units
-    const a = (+softeningEl.value) * worldScale;
-
-    // mass position in world coords
-    const mx = (mass.x - w/2) * worldScale;
-    const my = (mass.y - h/2) * worldScale;
-
-    const dx = wx - mx;
-    const dy = wy - my;
-    const r2 = dx*dx + dy*dy;
-
-    let z = -(k * m) / Math.sqrt(r2 + a*a);
-
-    // Clamp so it never becomes an absurd tube, while still allowing strong warping
-    const zMin = -1600;
-    if (z < zMin) z = zMin;
-
-    return z;
-  }
-
-  // Starfield (subtle)
+  // Simple starfield
   function drawStars(w,h){
     ctx.fillStyle = "rgba(255,255,255,0.08)";
     for (let i=0;i<160;i++){
@@ -304,92 +239,114 @@
     }
   }
 
+  // Warp model (2D displacement field)
+  // For each point p: displacement d = -k*m*(p - M)/(|p - M|^2 + a^2)
+  // Star mode: a from slider.
+  // Black hole mode: a ~= 0 (epsilon only), so it becomes "infinite" near center (visual singularity).
+  function warpPoint(x, y){
+    const k = +strengthEl.value;
+    const m = +massEl.value;
+
+    const vx = x - mass.x;
+    const vy = y - mass.y;
+
+    let a = +softeningEl.value;
+    if (mode === "bh") a = 0; // black hole: no softening
+
+    // epsilon prevents division-by-zero for BH mode but still explodes near center
+    const eps = 1e-6;
+    const r2 = vx*vx + vy*vy + a*a + eps;
+
+    const f = -(k * m) / r2;
+
+    // Clamp displacement so lines don't shoot off to infinity (keeps it drawable),
+    // but the field is still effectively "infinite" at the center (lines pile up).
+    const maxDisp = 2400;
+    let dx = f * vx;
+    let dy = f * vy;
+    const mag = Math.hypot(dx, dy);
+    if (mag > maxDisp){
+      dx *= maxDisp / mag;
+      dy *= maxDisp / mag;
+    }
+
+    return { x: x + dx, y: y + dy };
+  }
+
   function draw(){
     const w = canvas.clientWidth, h = canvas.clientHeight;
-
-    // background
     ctx.clearRect(0,0,w,h);
     ctx.fillStyle = "#000";
     ctx.fillRect(0,0,w,h);
     drawStars(w,h);
 
-    const spacingPx = +spacingEl.value;
-    const stepPx = Math.max(6, Math.min(14, spacingPx / 3));
+    const spacing = +spacingEl.value;
+    const step = Math.max(6, Math.min(16, spacing / 3));
 
-    const worldScale = 1.0 / (Math.max(w,h) / 820);
-    const spacingW = spacingPx * worldScale;
-    const stepW = stepPx * worldScale;
+    // Grid lines
+    ctx.lineWidth = 1.1;
 
-    // Plane extents: make it bigger than the view frustum so it fills the whole screen
-    const halfW = (w/2) * worldScale * 2.05;
-    const halfH = (h/2) * worldScale * 1.55;
-
-    const yaw = cam.yaw;
-    const pitch = cam.pitch;
-
-    ctx.lineWidth = 1.15;
-
-    function strokeLine(pts, alpha){
-      if (pts.length < 2) return;
-      ctx.strokeStyle = `rgba(190,190,190,${alpha})`;
+    // vertical
+    for (let gx = Math.floor(0/spacing)*spacing; gx <= w; gx += spacing){
       ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+      let first = true;
+      for (let y = 0; y <= h; y += step){
+        const p = warpPoint(gx, y);
+        if (first){ ctx.moveTo(p.x, p.y); first = false; }
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.strokeStyle = "rgba(190,190,190,0.45)";
       ctx.stroke();
     }
 
-    // Vertical grid lines
-    for (let gx = -halfW; gx <= halfW; gx += spacingW){
-      const pts = [];
-      for (let y = -halfH; y <= halfH; y += stepW){
-        const z = sheetZ(gx, y);
-        let v = { x: gx, y, z };
-        v = rotateY(v, yaw);
-        v = rotateX(v, pitch);
-        pts.push(project(v, w, h));
+    // horizontal
+    for (let gy = Math.floor(0/spacing)*spacing; gy <= h; gy += spacing){
+      ctx.beginPath();
+      let first = true;
+      for (let x = 0; x <= w; x += step){
+        const p = warpPoint(x, gy);
+        if (first){ ctx.moveTo(p.x, p.y); first = false; }
+        else ctx.lineTo(p.x, p.y);
       }
-      const mid = pts[(pts.length/2)|0];
-      const alpha = 0.10 + 0.48 * Math.max(0, Math.min(1, mid.s));
-      strokeLine(pts, alpha);
-    }
-
-    // Horizontal grid lines
-    for (let gy = -halfH; gy <= halfH; gy += spacingW){
-      const pts = [];
-      for (let x = -halfW; x <= halfW; x += stepW){
-        const z = sheetZ(x, gy);
-        let v = { x, y: gy, z };
-        v = rotateY(v, yaw);
-        v = rotateX(v, pitch);
-        pts.push(project(v, w, h));
-      }
-      const mid = pts[(pts.length/2)|0];
-      const alpha = 0.08 + 0.44 * Math.max(0, Math.min(1, mid.s));
-      strokeLine(pts, alpha);
+      ctx.strokeStyle = "rgba(190,190,190,0.45)";
+      ctx.stroke();
     }
 
     // Mass marker
     const M = +massEl.value;
-    const radius = 18 + 7 * Math.sqrt(M);
+    const r = 18 + 7 * Math.sqrt(M);
 
     // glow
     ctx.beginPath();
-    ctx.arc(mass.x, mass.y, radius*2.4, 0, Math.PI*2);
-    ctx.fillStyle = "rgba(255,230,170,0.10)";
+    ctx.arc(mass.x, mass.y, r*2.2, 0, Math.PI*2);
+    ctx.fillStyle = mode === "bh"
+      ? "rgba(120,190,255,0.10)"
+      : "rgba(255,230,170,0.10)";
     ctx.fill();
 
-    // body
+    // core
     ctx.beginPath();
-    ctx.arc(mass.x, mass.y, radius, 0, Math.PI*2);
-    ctx.fillStyle = "rgba(255,230,190,0.95)";
+    ctx.arc(mass.x, mass.y, r, 0, Math.PI*2);
+    ctx.fillStyle = mode === "bh"
+      ? "rgba(5,7,12,0.98)"
+      : "rgba(255,230,190,0.95)";
     ctx.fill();
 
     // rim
     ctx.beginPath();
-    ctx.arc(mass.x, mass.y, radius, 0, Math.PI*2);
+    ctx.arc(mass.x, mass.y, r, 0, Math.PI*2);
     ctx.strokeStyle = "rgba(255,255,255,0.32)";
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    // extra ring for BH look
+    if (mode === "bh"){
+      ctx.beginPath();
+      ctx.arc(mass.x, mass.y, r*1.55, 0, Math.PI*2);
+      ctx.strokeStyle = "rgba(180,230,255,0.22)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     requestAnimationFrame(draw);
   }
