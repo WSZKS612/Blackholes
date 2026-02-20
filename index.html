@@ -159,6 +159,81 @@ input[type="range"]{
 .btn.active{
   background:rgba(125,195,255,0.16);
 }
+
+/* --- Blackholes hover buttons --- */
+.btnRow{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+
+.hoverBtn{
+  position:relative;
+  flex:1;
+  min-width: 210px;
+}
+
+.hoverBtn button{
+  width:100%;
+  height:52px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(0,0,0,0.25);
+  color:inherit;
+  cursor:pointer;
+  font-size:14px;
+  letter-spacing:0.02em;
+}
+
+.hoverBtn button:hover{
+  background:rgba(255,255,255,0.06);
+  border-color:rgba(125,195,255,0.35);
+}
+
+/* Popup box */
+.pop{
+  position:absolute;
+  left:0;
+  right:0;
+  top: calc(100% + 10px);
+  z-index:50;
+
+  opacity:0;
+  transform: translateY(-6px);
+  pointer-events:none;
+
+  padding:14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(0,0,0,0.80);
+  box-shadow:0 18px 55px rgba(0,0,0,0.55);
+  backdrop-filter: blur(10px);
+
+  transition: opacity 140ms ease, transform 140ms ease;
+  font-size:14px;
+  line-height:1.55;
+  opacity:0.92;
+}
+
+/* Show popup on hover */
+.hoverBtn:hover .pop{
+  opacity:1;
+  transform: translateY(0);
+  pointer-events:auto;
+}
+
+/* On small screens: popups become normal blocks */
+@media (max-width: 720px){
+  .pop{
+    position:static;
+    margin-top:10px;
+    opacity:1;
+    transform:none;
+    pointer-events:auto;
+    background:rgba(0,0,0,0.35);
+  }
+}
 </style>
 </head>
 
@@ -207,6 +282,40 @@ headlines that evoke an awe-inspiring narrative such as black holes being a port
 The average reader may be convinced of the existence of cosmic gateways when such claims actually stem from
 theoretical models that are mathematically interesting but lack observational proof.
 </p>
+</section>
+
+<!-- BLACKHOLES SECTION -->
+<section class="box">
+  <h2>Blackholes:</h2>
+  <p>
+    Blackholes are particularly susceptible to pseudoscience that appeals to the mystery of what they are and how they function.
+  </p>
+
+  <div class="btnRow">
+    <div class="hoverBtn">
+      <button type="button">The concept…</button>
+      <div class="pop">
+        The concept of a blackhole was first hypothesised by the philosopher John Mitchell in 1783, with his proposition that
+        there may exist ‘dark stars’ with gravity so strong even light cannot escape.
+      </div>
+    </div>
+
+    <div class="hoverBtn">
+      <button type="button">Complex notion…</button>
+      <div class="pop">
+        The workings of black holes are still a complex notion to articulate to a general audience. Exotic-sounding ideas like a
+        singularity or space-time curvature make it easy for pseudoscientific claims to take root.
+      </div>
+    </div>
+
+    <div class="hoverBtn">
+      <button type="button">The aim…</button>
+      <div class="pop">
+        The aim of this section is to explore examples of the type of media described. There is an ‘in-depth’ section below that
+        expands on some of these ideas.
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- SIMULATION -->
