@@ -3,12 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Spacetime Warp Lab</title>
+  <title>Spacetime Warp</title>
   <style>
     :root { color-scheme: dark; }
-
-    * { box-sizing: border-box; }
-
+    *{ box-sizing:border-box; }
     body{
       margin:0;
       height:100vh;
@@ -18,7 +16,7 @@
       overflow:hidden;
     }
 
-    /* ====== Canvas fills screen ====== */
+    /* Canvas fills screen */
     canvas{
       position:fixed;
       inset:0;
@@ -27,256 +25,82 @@
       display:block;
     }
 
-    /* ====== Top bar ====== */
-    .topbar{
+    /* Minimal controls: sliders + reset only */
+    .ui{
       position:fixed;
-      top:0; left:0; right:0;
-      height:68px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:0 22px;
+      left:50%;
+      bottom:22px;
+      transform:translateX(-50%);
+      width:min(780px, calc(100vw - 28px));
       z-index:10;
-      pointer-events:none; /* let canvas receive drag unless on interactive elements */
-    }
-    .brand{
+      pointer-events:auto;
       display:flex;
       align-items:center;
       gap:12px;
-      letter-spacing:0.18em;
-      font-weight:600;
-      opacity:0.92;
-      pointer-events:auto;
-    }
-    .brand .box{
-      width:28px; height:44px;
-      border:2px solid rgba(255,255,255,0.85);
-      display:grid;
-      place-items:center;
-      font-size:10px;
-      letter-spacing:0.10em;
-      opacity:0.85;
-    }
-    .brand .title{
-      font-size:42px;
-      font-weight:300;
-      letter-spacing:0.12em;
-      line-height:1;
-    }
-    .menuDot{
-      width:28px; height:28px;
-      display:grid;
-      place-items:center;
-      border:1px solid rgba(255,255,255,0.22);
-      border-radius:8px;
-      opacity:0.85;
-      pointer-events:auto;
-    }
-    .menuDot::before{
-      content:"⋮";
-      font-size:18px;
-      transform: translateY(-1px);
-    }
-
-    /* ====== Bottom-left Observations panel ====== */
-    .panel{
-      position:fixed;
-      left:22px;
-      bottom:28px;
-      width:min(520px, calc(100vw - 44px));
-      z-index:10;
-      pointer-events:none;
-    }
-    .panel .heading{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin-bottom:10px;
-      opacity:0.92;
-      pointer-events:auto;
-    }
-    .eye{
-      width:18px; height:18px;
-      border:1.5px solid rgba(255,255,255,0.7);
-      border-radius:999px;
-      position:relative;
-      opacity:0.85;
-    }
-    .eye::after{
-      content:"";
-      position:absolute;
-      left:50%; top:50%;
-      width:5px; height:5px;
-      background:rgba(255,255,255,0.75);
-      border-radius:999px;
-      transform:translate(-50%,-50%);
-    }
-    .panel .heading span{
-      letter-spacing:0.18em;
-      font-size:15px;
-      text-transform:uppercase;
-    }
-    .panel .body{
-      font-size:18px;
-      line-height:1.4;
-      max-width:46ch;
-      opacity:0.78;
-      pointer-events:auto;
-    }
-
-    /* ====== Bottom center controls ====== */
-    .controls{
-      position:fixed;
-      left:50%;
-      bottom:24px;
-      transform:translateX(-50%);
-      display:flex;
-      align-items:center;
-      gap:14px;
-      z-index:10;
-      pointer-events:auto;
-    }
-    .pill{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 12px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,0.18);
-      background:rgba(0,0,0,0.35);
-      backdrop-filter: blur(10px);
-    }
-    .iconBtn{
-      width:44px; height:44px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,0.18);
-      background:rgba(0,0,0,0.35);
-      color:inherit;
-      cursor:pointer;
-      display:grid;
-      place-items:center;
-      backdrop-filter: blur(10px);
-    }
-    .iconBtn:hover{ background:rgba(255,255,255,0.06); }
-
-    .record{
-      width:60px; height:60px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,0.22);
-      display:grid;
-      place-items:center;
-      background:rgba(0,0,0,0.35);
-    }
-    .record .dot{
-      width:16px; height:16px;
-      border-radius:999px;
-      background:#ff2a2a;
-      box-shadow: 0 0 18px rgba(255,42,42,0.65);
-    }
-
-    /* ====== Right side zoom buttons ====== */
-    .rightStack{
-      position:fixed;
-      right:18px;
-      bottom:120px;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      z-index:10;
-      pointer-events:auto;
-    }
-    .zoomBtn{
-      width:56px; height:56px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,0.18);
-      background:rgba(0,0,0,0.35);
-      color:inherit;
-      cursor:pointer;
-      display:grid;
-      place-items:center;
-      backdrop-filter: blur(10px);
-      font-size:22px;
-      line-height:1;
-    }
-    .zoomBtn:hover{ background:rgba(255,255,255,0.06); }
-
-    /* ====== Slider strip (subtle) ====== */
-    .sliderStrip{
-      position:fixed;
-      left:50%;
-      bottom:96px;
-      transform:translateX(-50%);
-      width:min(640px, calc(100vw - 40px));
-      z-index:10;
-      pointer-events:auto;
-      display:flex;
-      gap:10px;
-      align-items:center;
-      padding:10px 14px;
-      border-radius:14px;
+      padding:12px 14px;
+      border-radius:16px;
       border:1px solid rgba(255,255,255,0.14);
-      background:rgba(0,0,0,0.25);
+      background:rgba(0,0,0,0.30);
       backdrop-filter: blur(10px);
     }
-    .sliderStrip label{
+
+    .sliders{
+      flex:1;
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:10px;
+      min-width:0;
+    }
+
+    label{
       display:flex;
       flex-direction:column;
       gap:6px;
-      flex:1;
       min-width:0;
-      font-size:12px;
+      font-size:11px;
       letter-spacing:0.14em;
       text-transform:uppercase;
-      opacity:0.85;
+      opacity:0.86;
     }
     input[type="range"]{
       width:100%;
-      accent-color: #7dc3ff;
+      accent-color:#7dc3ff;
     }
     .vals{
       display:flex;
       justify-content:space-between;
       font-size:11px;
-      opacity:0.7;
+      opacity:0.72;
       letter-spacing:0.08em;
     }
 
-    /* Mobile: make panel smaller */
-    @media (max-width: 520px){
-      .brand .title{ font-size:34px; }
-      .panel .body{ font-size:16px; }
-      .sliderStrip{ bottom:104px; }
-      .controls{ bottom:18px; }
+    .btn{
+      width:52px;
+      height:52px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:rgba(0,0,0,0.25);
+      color:inherit;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      font-size:20px;
+    }
+    .btn:hover{ background:rgba(255,255,255,0.06); }
+
+    @media (max-width: 720px){
+      .sliders{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ui{ bottom:14px; }
+      .btn{ width:50px; height:50px; }
     }
   </style>
 </head>
 <body>
 
-  <canvas id="c"></canvas>
+<canvas id="c"></canvas>
 
-  <!-- Top bar -->
-  <div class="topbar">
-    <div class="brand">
-      <div class="box">LAB</div>
-      <div class="title">LAB</div>
-    </div>
-    <div class="menuDot" title="Menu (visual only)"></div>
-  </div>
-
-  <!-- Observations panel -->
-  <div class="panel">
-    <div class="heading">
-      <div class="eye"></div>
-      <span>Observations</span>
-    </div>
-    <div class="body" id="obsText">
-      A more massive object creates a deeper distortion in space-time, bending nearby paths more strongly.
-      Drag the mass to move it, and adjust the sliders to compare different strengths of curvature.
-    </div>
-  </div>
-
-  <!-- Slider strip -->
-  <div class="sliderStrip" aria-label="Simulation controls">
+<div class="ui" aria-label="Simulation controls">
+  <div class="sliders">
     <label>
       Mass
       <input id="mass" type="range" min="0.2" max="12" step="0.01" value="2.5" />
@@ -302,18 +126,8 @@
     </label>
   </div>
 
-  <!-- Bottom center controls (visual-style like the reference) -->
-  <div class="controls">
-    <button class="iconBtn" id="reset" title="Reset view">⟲</button>
-    <div class="record" title="Record (visual only)"><div class="dot"></div></div>
-    <button class="iconBtn" id="mute" title="Sound (visual only)">🔈</button>
-  </div>
-
-  <!-- Right stack zoom buttons -->
-  <div class="rightStack">
-    <button class="zoomBtn" id="zoomIn" title="Zoom in">+</button>
-    <button class="zoomBtn" id="zoomOut" title="Zoom out">−</button>
-  </div>
+  <button class="btn" id="reset" title="Reset view">⟲</button>
+</div>
 
 <script>
   const canvas = document.getElementById("c");
@@ -350,38 +164,32 @@
   [massEl, strengthEl, softeningEl, spacingEl].forEach(el => el.addEventListener("input", updateLabels));
   updateLabels();
 
-  // One mass (draggable)
+  // One draggable mass
   const mass = { x: 0, y: 0 };
+
   function resetMassPos(){
     const w = canvas.clientWidth, h = canvas.clientHeight;
-    mass.x = w * 0.38;
+    mass.x = w * 0.42;
     mass.y = h * 0.46;
   }
   resetMassPos();
 
-  // Camera: slight tilt toward viewer (like reference), full-width plane
+  // Camera: angled toward viewer (like your reference), and wide plane fills screen
   let cam = {
-    yaw: 0.05,     // subtle side rotation (almost centered)
-    pitch: 0.78,   // tilt toward viewer (smaller -> more toward viewer)
+    yaw: 0.04,
+    pitch: 0.72,  // tilt toward viewer
     zoom: 1.0,
-    dist: 900
+    dist: 980
   };
 
-  // Buttons
   document.getElementById("reset").addEventListener("click", () => {
-    cam.yaw = 0.05;
-    cam.pitch = 0.78;
+    cam.yaw = 0.04;
+    cam.pitch = 0.72;
     cam.zoom = 1.0;
     resetMassPos();
   });
-  document.getElementById("zoomIn").addEventListener("click", () => {
-    cam.zoom = Math.min(2.6, cam.zoom * 1.12);
-  });
-  document.getElementById("zoomOut").addEventListener("click", () => {
-    cam.zoom = Math.max(0.55, cam.zoom * 0.90);
-  });
 
-  // Drag to move mass OR rotate (drag empty space)
+  // Drag to move mass OR rotate plane (drag empty space)
   let pointerDown = false;
   let draggingMass = false;
   let last = { x: 0, y: 0 };
@@ -422,9 +230,9 @@
       mass.x = p.x - dragOffset.x;
       mass.y = p.y - dragOffset.y;
     } else {
-      cam.yaw += dx * 0.005;
-      cam.pitch += dy * 0.005;
-      cam.pitch = Math.max(0.55, Math.min(1.15, cam.pitch));
+      cam.yaw += dx * 0.0048;
+      cam.pitch += dy * 0.0048;
+      cam.pitch = Math.max(0.52, Math.min(1.05, cam.pitch));
     }
   });
 
@@ -449,13 +257,13 @@
     return { x: v.x, y: v.y * ca - v.z * sa, z: v.y * sa + v.z * ca };
   }
   function project(v, w, h){
-    const vz = v.z + 260;         // lift the sheet a touch
+    const vz = v.z + 290;          // lift the sheet so it reads across whole screen
     const d = cam.dist / cam.zoom;
     const s = d / (d + vz);
     return { x: w/2 + v.x * s, y: h/2 + v.y * s, s };
   }
 
-  // Warping (adjustable softening):
+  // Warping with softening:
   // z = -k * m / sqrt(r^2 + a^2)
   function sheetZ(wx, wy){
     const k = +strengthEl.value;
@@ -463,13 +271,13 @@
 
     const w = canvas.clientWidth, h = canvas.clientHeight;
 
-    // World scaling chosen so the plane spans full width (like the reference)
-    const worldScale = 1.0 / (Math.max(w,h) / 740);
+    // IMPORTANT: choose scale so the plane fills the *entire* screen (like your reference)
+    const worldScale = 1.0 / (Math.max(w,h) / 820);
 
-    // Softening in world units
+    // softening in world units
     const a = (+softeningEl.value) * worldScale;
 
-    // Mass in world coords
+    // mass position in world coords
     const mx = (mass.x - w/2) * worldScale;
     const my = (mass.y - h/2) * worldScale;
 
@@ -477,20 +285,19 @@
     const dy = wy - my;
     const r2 = dx*dx + dy*dy;
 
-    // Less aggressive by default, and still controllable via k and a
     let z = -(k * m) / Math.sqrt(r2 + a*a);
 
-    // Clamp to avoid runaway “tube” (still allows strong warp at high mass)
-    const zMin = -1400;
+    // Clamp so it never becomes an absurd tube, while still allowing strong warping
+    const zMin = -1600;
     if (z < zMin) z = zMin;
 
     return z;
   }
 
-  // Starfield
+  // Starfield (subtle)
   function drawStars(w,h){
-    ctx.fillStyle = "rgba(255,255,255,0.10)";
-    for (let i=0;i<140;i++){
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    for (let i=0;i<160;i++){
       const x = (i*137) % w;
       const y = (i*227) % h;
       ctx.fillRect(x, y, 1, 1);
@@ -500,27 +307,27 @@
   function draw(){
     const w = canvas.clientWidth, h = canvas.clientHeight;
 
-    // Background
+    // background
     ctx.clearRect(0,0,w,h);
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = "#000";
     ctx.fillRect(0,0,w,h);
     drawStars(w,h);
 
     const spacingPx = +spacingEl.value;
     const stepPx = Math.max(6, Math.min(14, spacingPx / 3));
 
-    const worldScale = 1.0 / (Math.max(w,h) / 740);
+    const worldScale = 1.0 / (Math.max(w,h) / 820);
     const spacingW = spacingPx * worldScale;
     const stepW = stepPx * worldScale;
 
-    // Plane extents: wider than screen so it fills the full width with perspective
-    const halfW = (w/2) * worldScale * 1.65;
-    const halfH = (h/2) * worldScale * 1.05;
+    // Plane extents: make it bigger than the view frustum so it fills the whole screen
+    const halfW = (w/2) * worldScale * 2.05;
+    const halfH = (h/2) * worldScale * 1.55;
 
     const yaw = cam.yaw;
     const pitch = cam.pitch;
 
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1.15;
 
     function strokeLine(pts, alpha){
       if (pts.length < 2) return;
@@ -542,7 +349,7 @@
         pts.push(project(v, w, h));
       }
       const mid = pts[(pts.length/2)|0];
-      const alpha = 0.14 + 0.42 * Math.max(0, Math.min(1, mid.s));
+      const alpha = 0.10 + 0.48 * Math.max(0, Math.min(1, mid.s));
       strokeLine(pts, alpha);
     }
 
@@ -557,7 +364,7 @@
         pts.push(project(v, w, h));
       }
       const mid = pts[(pts.length/2)|0];
-      const alpha = 0.12 + 0.38 * Math.max(0, Math.min(1, mid.s));
+      const alpha = 0.08 + 0.44 * Math.max(0, Math.min(1, mid.s));
       strokeLine(pts, alpha);
     }
 
@@ -580,20 +387,13 @@
     // rim
     ctx.beginPath();
     ctx.arc(mass.x, mass.y, radius, 0, Math.PI*2);
-    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.strokeStyle = "rgba(255,255,255,0.32)";
     ctx.lineWidth = 2;
     ctx.stroke();
-
-    // label
-    ctx.font = "14px system-ui, sans-serif";
-    ctx.fillStyle = "rgba(230,240,255,0.78)";
-    ctx.fillText(`m = ${M.toFixed(2)}`, mass.x + radius + 10, mass.y + 5);
 
     requestAnimationFrame(draw);
   }
 
-  // Initial label update + render
-  updateLabels();
   draw();
 </script>
 </body>
