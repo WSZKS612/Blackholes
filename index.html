@@ -1,453 +1,293 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Physics Mythbusters</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Physics Mythbusters</title>
 
-  <style>
-    :root { color-scheme: dark; }
-    *{ box-sizing:border-box; }
+<style>
+:root { color-scheme: dark; }
+*{ box-sizing:border-box; }
 
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background: radial-gradient(1200px 700px at 20% 0%, rgba(125,195,255,0.16), transparent 55%),
-                  radial-gradient(1000px 700px at 80% 15%, rgba(170,120,255,0.14), transparent 60%),
-                  #0b1020;
-      color:#eaf2ff;
-    }
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  background: radial-gradient(1200px 700px at 20% 0%, rgba(125,195,255,0.16), transparent 55%),
+              radial-gradient(1000px 700px at 80% 15%, rgba(170,120,255,0.14), transparent 60%),
+              #0b1020;
+  color:#eaf2ff;
+}
 
-    .container{
-      max-width: 1000px;
-      margin: 40px auto;
-      padding: 22px 16px 70px;
-    }
+.container{
+  max-width:1000px;
+  margin:40px auto;
+  padding:22px 16px 70px;
+}
 
-    h1{
-      margin: 0 0 18px;
-      font-size: 32px;
-      letter-spacing: 0.01em;
-    }
+h1{
+  margin:0 0 18px;
+  font-size:32px;
+}
 
-    /* Shared “box/card” style */
-    .box{
-      margin-top: 14px;
-      padding: 18px;
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(0,0,0,0.28);
-      box-shadow: 0 18px 55px rgba(0,0,0,0.45);
-      backdrop-filter: blur(10px);
-    }
+/* Shared Box Style */
+.box{
+  margin-top:18px;
+  padding:18px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(0,0,0,0.28);
+  box-shadow:0 18px 55px rgba(0,0,0,0.45);
+  backdrop-filter:blur(10px);
+}
 
-    .box h2{
-      margin: 0 0 10px;
-      font-size: 22px;
-    }
+.box h2{
+  margin:0 0 10px;
+  font-size:22px;
+}
 
-    .box p{
-      margin: 0;
-      line-height: 1.65;
-      opacity: 0.9;
-      font-size: 15px;
-    }
+.box p{
+  margin:0;
+  line-height:1.65;
+  opacity:0.9;
+  font-size:15px;
+}
 
-    /* Image + caption box */
-    figure{
-      margin: 0;
-    }
+/* Image styling */
+.imgWrap{
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.03);
+}
 
-    .imgWrap{
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.03);
-    }
+.imgWrap img{
+  display:block;
+  width:100%;
+  height:auto;
+}
 
-    .imgWrap img{
-      display:block;
-      width:100%;
-      height:auto;
-    }
+.caption{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,0.10);
+  font-size:13px;
+  line-height:1.45;
+  opacity:0.75;
+}
 
-    .caption{
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255,255,255,0.10);
-      font-size: 13px;
-      line-height: 1.45;
-      opacity: 0.75;
-    }
+/* Simulation Card */
+.card{
+  margin-top:20px;
+  border-radius:20px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(0,0,0,0.25);
+  box-shadow:0 18px 55px rgba(0,0,0,0.45);
+}
 
-    /* Simulation card */
-    .card{
-      margin-top: 18px;
-      border-radius: 20px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(0,0,0,0.25);
-      box-shadow: 0 18px 55px rgba(0,0,0,0.45);
-    }
+.cardHeader{
+  padding:14px 16px;
+  font-weight:650;
+  background:rgba(0,0,0,0.38);
+  border-bottom:1px solid rgba(255,255,255,0.10);
+}
 
-    .cardHeader{
-      padding: 14px 16px;
-      font-weight: 650;
-      letter-spacing: 0.02em;
-      background: rgba(0,0,0,0.38);
-      border-bottom: 1px solid rgba(255,255,255,0.10);
-    }
+.sim{
+  position:relative;
+  height:520px;
+  background:#000;
+  overflow:hidden;
+}
 
-    .sim{
-      position: relative;
-      height: 520px;
-      background: #000;
-      overflow: hidden;
-    }
+canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+}
 
-    canvas{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      display:block;
-    }
+.ui{
+  position:absolute;
+  left:50%;
+  bottom:14px;
+  transform:translateX(-50%);
+  width:min(760px, calc(100% - 28px));
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(0,0,0,0.30);
+}
 
-    /* UI inside simulation (contained, not fixed to the page) */
-    .ui{
-      position:absolute;
-      left:50%;
-      bottom: 14px;
-      transform:translateX(-50%);
-      width:min(760px, calc(100% - 28px));
-      z-index:10;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:12px 12px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,0.14);
-      background:rgba(0,0,0,0.30);
-      backdrop-filter: blur(10px);
-    }
+.massWrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:11px;
+  text-transform:uppercase;
+}
 
-    .massWrap{
-      flex:1;
-      min-width:0;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      font-size:11px;
-      letter-spacing:0.14em;
-      text-transform:uppercase;
-      opacity:0.86;
-    }
+input[type="range"]{
+  width:100%;
+  accent-color:#7dc3ff;
+}
 
-    input[type="range"]{
-      width:100%;
-      accent-color:#7dc3ff;
-    }
+.vals{
+  display:flex;
+  justify-content:space-between;
+  font-size:11px;
+}
 
-    .vals{
-      display:flex;
-      justify-content:space-between;
-      font-size:11px;
-      opacity:0.72;
-      letter-spacing:0.08em;
-    }
-
-    .btn{
-      height:52px;
-      padding:0 14px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,0.18);
-      background:rgba(0,0,0,0.25);
-      color:inherit;
-      cursor:pointer;
-      display:grid;
-      place-items:center;
-      font-size:14px;
-      letter-spacing:0.06em;
-      white-space:nowrap;
-      user-select:none;
-    }
-    .btn:hover{ background:rgba(255,255,255,0.06); }
-    .btn.active{
-      background:rgba(125,195,255,0.16);
-      border-color:rgba(125,195,255,0.35);
-    }
-
-    @media (max-width: 720px){
-      .sim{ height: 560px; }
-      .btn{ height:48px; padding:0 12px; }
-    }
-  </style>
+.btn{
+  height:48px;
+  padding:0 14px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(0,0,0,0.25);
+  color:inherit;
+  cursor:pointer;
+}
+.btn.active{
+  background:rgba(125,195,255,0.16);
+}
+</style>
 </head>
 
 <body>
-  <div class="container">
-    <h1>Physics Mythbusters</h1>
+<div class="container">
 
-    <!-- BOX 1: Main text paragraph -->
-    <section class="box">
-      <h2>‘The Oldest Science’:</h2>
-      <p>
-        Often referred to as the oldest science, the study of astronomy has captivated minds throughout history.
-        Archaeological evidence shows that ancient communities like the Egyptians, Babylonians and Maya all had
-        forms of astronomy, aiding in timekeeping and navigation as well as underpinning many of their religious beliefs.
-      </p>
+<h1>Physics Mythbusters</h1>
 
-      <p>
-        blah blah
-      </p>
-      
-    </section>
+<!-- OLD SCIENCE TEXT -->
+<section class="box">
+<h2>‘The Oldest Science’:</h2>
+<p>
+Often referred to as the oldest science, the study of astronomy has captivated minds throughout history.
+Archaeological evidence shows that ancient communities like the Egyptians, Babylonians and Maya all had
+forms of astronomy, aiding in timekeeping and navigation as well as underpinning many of their religious beliefs.
+</p>
+</section>
 
-    <!-- BOX 2: Image + caption (separate box) -->
-    <section class="box" aria-label="Astronomy image and caption">
-      <figure>
-        <div class="imgWrap">
-          <!-- IMPORTANT: make sure the file exists at images/senenmuttomb.png -->
-          <img
-            src="./images/senenmuttomb.png"
-            alt="Astronomical ceiling of the tomb of Senenmut showing constellation diagrams and 24-part discs.">
-        </div>
+<!-- IMAGE BOX -->
+<section class="box">
+<div class="imgWrap">
+<img
+src="./images/Astronomical_Ceiling,_Tomb_of_Senenmut_MET_DT207429.jpg"
+alt="Astronomical ceiling of the tomb of Senenmut showing constellation diagrams and 24-part discs.">
+</div>
 
-        <div class="caption">
-          Astronomical ceiling of the tomb of Senenmut depicting a constellation diagram with discs divided into 24 sections,
-          suggesting a 24-hour time period.
-        </div>
-      </figure>
-    </section>
+<div class="caption">
+Astronomical ceiling of the tomb of Senenmut depicting a constellation diagram with discs divided into 24 sections,
+suggesting a 24-hour time period.
+</div>
+</section>
 
-    <!-- SIMULATION CARD -->
-    <div class="card">
-      <div class="cardHeader">2D Spacetime Warp</div>
+<!-- MODERN DAY SECTION -->
+<section class="box">
+<h2>The Modern Day:</h2>
+<p>
+The vast mysterious nature of the universe captures the interest of the general public in the modern day too.
+That wonder however, leaves astronomy and cosmology vulnerable to misleading or exaggerated headlines.
+</p>
+</section>
 
-      <div class="sim">
-        <canvas id="c"></canvas>
+<section class="box">
+<p>
+Websites and videos will commonly abuse a highly speculative hypothesis and present it as an established fact with
+headlines that evoke an awe-inspiring narrative such as black holes being a portal to another universe.
+The average reader may be convinced of the existence of cosmic gateways when such claims actually stem from
+theoretical models that are mathematically interesting but lack observational proof.
+</p>
+</section>
 
-        <div class="ui" aria-label="Simulation controls">
-          <div class="massWrap">
-            MASS
-            <input id="mass" type="range" min="0.2" max="12" step="0.01" value="2.5" />
-            <div class="vals"><span id="massVal">2.50</span><span>m</span></div>
-          </div>
+<!-- SIMULATION -->
+<div class="card">
+<div class="cardHeader">2D Spacetime Warp</div>
+<div class="sim">
+<canvas id="c"></canvas>
 
-          <button class="btn" id="starBtn" title="Finite warp (softened)">Star</button>
-          <button class="btn" id="bhBtn" title="Infinite warp (visual singularity)">Black hole</button>
-          <button class="btn" id="reset" title="Reset">Reset</button>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="ui">
+<div class="massWrap">
+MASS
+<input id="mass" type="range" min="0.2" max="12" step="0.01" value="2.5" />
+<div class="vals"><span id="massVal">2.50</span><span>m</span></div>
+</div>
+
+<button class="btn" id="starBtn">Star</button>
+<button class="btn" id="bhBtn">Black hole</button>
+<button class="btn" id="reset">Reset</button>
+</div>
+</div>
+</div>
+
+</div>
 
 <script>
-  const canvas = document.getElementById("c");
-  const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
+function resize(){const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;}
+window.addEventListener("resize",resize);resize();
 
-  // Fixed parameters
-  const GRID_SPACING = 36;   // px
-  const WARP_STRENGTH = 244; // k
-  const SOFTENING = 25;      // px (star mode)
+const GRID=36,STRENGTH=244,SOFT=25;
+let mode="star";
+const mass={x:0,y:0};
+function resetMass(){mass.x=canvas.width*0.42;mass.y=canvas.height*0.46;}
+resetMass();
 
-  function resize(){
-    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    const r = canvas.getBoundingClientRect();
-    canvas.width = Math.floor(r.width * dpr);
-    canvas.height = Math.floor(r.height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  window.addEventListener("resize", resize);
-  resize();
+const massEl=document.getElementById("mass");
+const massVal=document.getElementById("massVal");
+massEl.oninput=()=>massVal.textContent=(+massEl.value).toFixed(2);
 
-  // UI
-  const massEl = document.getElementById("mass");
-  const massVal = document.getElementById("massVal");
-  const starBtn = document.getElementById("starBtn");
-  const bhBtn = document.getElementById("bhBtn");
-  const resetBtn = document.getElementById("reset");
+document.getElementById("starBtn").onclick=()=>mode="star";
+document.getElementById("bhBtn").onclick=()=>mode="bh";
+document.getElementById("reset").onclick=()=>resetMass();
 
-  function updateMassLabel(){
-    massVal.textContent = (+massEl.value).toFixed(2);
-  }
-  massEl.addEventListener("input", updateMassLabel);
-  updateMassLabel();
+canvas.onpointerdown=e=>{
+const r=canvas.getBoundingClientRect();
+mass.x=e.clientX-r.left;
+mass.y=e.clientY-r.top;
+};
 
-  // Mode: "star" uses fixed softening, "bh" ignores softening
-  let mode = "star";
-  function setMode(newMode){
-    mode = newMode;
-    starBtn.classList.toggle("active", mode === "star");
-    bhBtn.classList.toggle("active", mode === "bh");
-  }
-  setMode("star");
+function warp(x,y){
+const vx=x-mass.x,vy=y-mass.y;
+const a=mode==="bh"?0:SOFT;
+const r2=vx*vx+vy*vy+a*a+1e-6;
+const f=-(STRENGTH*(+massEl.value))/r2;
+return{x:x+f*vx,y:y+f*vy};
+}
 
-  // One draggable mass
-  const mass = { x: 0, y: 0 };
-  function resetMassPos(){
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    mass.x = w * 0.42;
-    mass.y = h * 0.46;
-  }
-  resetMassPos();
-
-  resetBtn.addEventListener("click", () => {
-    setMode("star");
-    resetMassPos();
-  });
-
-  starBtn.addEventListener("click", () => setMode("star"));
-  bhBtn.addEventListener("click", () => setMode("bh"));
-
-  // Drag mass
-  let dragging = false;
-  let dragOffset = {x:0,y:0};
-
-  function pos(ev){
-    const r = canvas.getBoundingClientRect();
-    return { x: ev.clientX - r.left, y: ev.clientY - r.top };
-  }
-  function hitMass(p){
-    const r = 16 + 7 * Math.sqrt(+massEl.value);
-    const dx = p.x - mass.x, dy = p.y - mass.y;
-    return (dx*dx + dy*dy) <= r*r;
-  }
-
-  canvas.addEventListener("pointerdown", (ev) => {
-    canvas.setPointerCapture(ev.pointerId);
-    const p = pos(ev);
-    if (hitMass(p)){
-      dragging = true;
-      dragOffset.x = p.x - mass.x;
-      dragOffset.y = p.y - mass.y;
-    }
-  });
-  canvas.addEventListener("pointermove", (ev) => {
-    if (!dragging) return;
-    const p = pos(ev);
-    mass.x = p.x - dragOffset.x;
-    mass.y = p.y - dragOffset.y;
-  });
-  canvas.addEventListener("pointerup", () => dragging = false);
-  canvas.addEventListener("pointercancel", () => dragging = false);
-
-  // Starfield
-  function drawStars(w,h){
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
-    for (let i=0;i<160;i++){
-      const x = (i*137) % w;
-      const y = (i*227) % h;
-      ctx.fillRect(x, y, 1, 1);
-    }
-  }
-
-  // Warp field
-  function warpPoint(x, y){
-    const k = WARP_STRENGTH;
-    const m = +massEl.value;
-
-    const vx = x - mass.x;
-    const vy = y - mass.y;
-
-    const a = (mode === "bh") ? 0 : SOFTENING;
-
-    const eps = 1e-6;
-    const r2 = vx*vx + vy*vy + a*a + eps;
-
-    const f = -(k * m) / r2;
-
-    // Clamp displacement so it remains drawable
-    const maxDisp = 2600;
-    let dx = f * vx;
-    let dy = f * vy;
-    const mag = Math.hypot(dx, dy);
-    if (mag > maxDisp){
-      dx *= maxDisp / mag;
-      dy *= maxDisp / mag;
-    }
-
-    return { x: x + dx, y: y + dy };
-  }
-
-  function draw(){
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    ctx.clearRect(0,0,w,h);
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0,0,w,h);
-    drawStars(w,h);
-
-    const spacing = GRID_SPACING;
-    const step = Math.max(6, Math.min(16, spacing / 3));
-
-    ctx.lineWidth = 1.1;
-
-    // vertical
-    for (let gx = 0; gx <= w; gx += spacing){
-      ctx.beginPath();
-      let first = true;
-      for (let y = 0; y <= h; y += step){
-        const p = warpPoint(gx, y);
-        if (first){ ctx.moveTo(p.x, p.y); first = false; }
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.strokeStyle = "rgba(190,190,190,0.45)";
-      ctx.stroke();
-    }
-
-    // horizontal
-    for (let gy = 0; gy <= h; gy += spacing){
-      ctx.beginPath();
-      let first = true;
-      for (let x = 0; x <= w; x += step){
-        const p = warpPoint(x, gy);
-        if (first){ ctx.moveTo(p.x, p.y); first = false; }
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.strokeStyle = "rgba(190,190,190,0.45)";
-      ctx.stroke();
-    }
-
-    // Mass marker
-    const M = +massEl.value;
-    const r = 18 + 7 * Math.sqrt(M);
-
-    // glow
-    ctx.beginPath();
-    ctx.arc(mass.x, mass.y, r*2.2, 0, Math.PI*2);
-    ctx.fillStyle = (mode === "bh")
-      ? "rgba(120,190,255,0.10)"
-      : "rgba(255,230,170,0.10)";
-    ctx.fill();
-
-    // core
-    ctx.beginPath();
-    ctx.arc(mass.x, mass.y, r, 0, Math.PI*2);
-    ctx.fillStyle = (mode === "bh")
-      ? "rgba(5,7,12,0.98)"
-      : "rgba(255,230,190,0.95)";
-    ctx.fill();
-
-    // rim
-    ctx.beginPath();
-    ctx.arc(mass.x, mass.y, r, 0, Math.PI*2);
-    ctx.strokeStyle = "rgba(255,255,255,0.32)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // extra ring for BH
-    if (mode === "bh"){
-      ctx.beginPath();
-      ctx.arc(mass.x, mass.y, r*1.55, 0, Math.PI*2);
-      ctx.strokeStyle = "rgba(180,230,255,0.22)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    requestAnimationFrame(draw);
-  }
-
-  draw();
+function draw(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+for(let gx=0;gx<=canvas.width;gx+=GRID){
+ctx.beginPath();
+for(let y=0;y<=canvas.height;y+=6){
+const p=warp(gx,y);
+y===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+}
+ctx.strokeStyle="rgba(200,200,200,0.4)";
+ctx.stroke();
+}
+for(let gy=0;gy<=canvas.height;gy+=GRID){
+ctx.beginPath();
+for(let x=0;x<=canvas.width;x+=6){
+const p=warp(x,gy);
+x===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+}
+ctx.strokeStyle="rgba(200,200,200,0.4)";
+ctx.stroke();
+}
+ctx.beginPath();
+ctx.arc(mass.x,mass.y,18,0,Math.PI*2);
+ctx.fillStyle="rgba(255,230,190,0.9)";
+ctx.fill();
+requestAnimationFrame(draw);
+}
+draw();
 </script>
+
 </body>
 </html>
