@@ -6,19 +6,77 @@
 <title>Physics Mythbusters</title>
 
 <style>
+:root { color-scheme: dark; }
+
 body{
   margin:0;
-  font-family:system-ui;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   background:#0b1020;
-  color:white;
+  color:#eaf2ff;
 }
 
+/* Layout container */
 .container{
   max-width:1000px;
   margin:40px auto;
   padding:20px;
 }
 
+/* Header */
+h1{
+  margin:0 0 20px;
+  font-size:32px;
+}
+
+/* Section styling */
+.section{
+  margin-bottom:30px;
+  padding:20px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(255,255,255,0.05);
+  box-shadow:0 20px 50px rgba(0,0,0,0.4);
+}
+
+.kicker{
+  font-size:12px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  opacity:0.7;
+  margin-bottom:10px;
+}
+
+.section h2{
+  margin:0 0 10px;
+  font-size:22px;
+}
+
+.section p{
+  line-height:1.6;
+  opacity:0.9;
+}
+
+/* Image styling */
+.figure{
+  margin-top:15px;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,0.12);
+}
+
+.figure img{
+  width:100%;
+  display:block;
+}
+
+.caption{
+  padding:12px;
+  font-size:13px;
+  opacity:0.75;
+  border-top:1px solid rgba(255,255,255,0.1);
+}
+
+/* Simulation Card */
 .card{
   border-radius:20px;
   overflow:hidden;
@@ -33,56 +91,128 @@ body{
   background:rgba(0,0,0,0.4);
 }
 
+/* Simulation container */
 .sim{
-  aspect-ratio:16/9;
-  width:100%;
+  position:relative;
+  height:500px;
 }
 
-iframe{
+canvas{
+  position:absolute;
+  inset:0;
   width:100%;
   height:100%;
-  border:0;
+  display:block;
+  background:#000;
 }
 </style>
 </head>
 
 <body>
 
-  <div class="container">
-    <h1>Physics Mythbusters</h1>
+<div class="container">
+<h1>Physics Mythbusters</h1>
 
-    <section class="section">
-    <div class="kicker">The Oldest Science</div>
+<!-- OLD SCIENCE SECTION -->
+<section class="section">
+  <div class="kicker">The Oldest Science</div>
 
-    <h2>‘The Oldest Science’:</h2>
+  <h2>‘The Oldest Science’</h2>
 
-    <p>
-      Often referred to as the oldest science, the study of astronomy has captivated minds throughout history.
-      Archaeological evidence shows that ancient communities like the Egyptians, Babylonians and Maya all had
-      forms of astronomy, aiding in timekeeping and navigation as well as underpinning many of their religious beliefs.
-    </p>
+  <p>
+    Often referred to as the oldest science, the study of astronomy has captivated minds throughout history.
+    Archaeological evidence shows that ancient communities like the Egyptians, Babylonians and Maya all had
+    forms of astronomy, aiding in timekeeping and navigation as well as underpinning many of their religious beliefs.
+  </p>
 
-    <figure class="figure">
-      <img> src="./images/senenmut-ceiling.png"
-           alt="Astronomical ceiling of the tomb of Senenmut showing constellation diagrams and 24-part discs.">
-      <figcaption class="caption">
-        Astronomical ceiling of the tomb of Senenmut depicting a constellation diagram with discs divided into 24 sections,
-        suggesting a 24-hour time period.
-      </figcaption>
-    </figure>
-  </section>
-  
-  <div class="card">
-    <div class="card-header">
-      2D Spacetime Warp
-    </div>
+  <figure class="figure">
+    <img src="./images/senenmut-ceiling.png"
+         alt="Astronomical ceiling of the tomb of Senenmut showing constellation diagrams and 24-part discs.">
+    <figcaption class="caption">
+      Astronomical ceiling of the tomb of Senenmut depicting a constellation diagram with discs divided into 24 sections,
+      suggesting a 24-hour time period.
+    </figcaption>
+  </figure>
+</section>
 
-    <div class="sim">
-      <iframe src="./warp/"></iframe>
-    </div>
+<!-- SIMULATION -->
+<div class="card">
+  <div class="card-header">2D Spacetime Warp</div>
+  <div class="sim">
+    <canvas id="c"></canvas>
   </div>
+</div>
 
 </div>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+}
+window.addEventListener("resize", resize);
+resize();
+
+const GRID_SPACING = 36;
+const WARP_STRENGTH = 244;
+const SOFTENING = 25;
+
+let mass = { x: canvas.width/2, y: canvas.height/2 };
+let massValue = 3;
+
+canvas.addEventListener("click", (e)=>{
+  const rect = canvas.getBoundingClientRect();
+  mass.x = e.clientX - rect.left;
+  mass.y = e.clientY - rect.top;
+});
+
+function warpPoint(x,y){
+  const vx = x - mass.x;
+  const vy = y - mass.y;
+  const r2 = vx*vx + vy*vy + SOFTENING*SOFTENING;
+  const f = -(WARP_STRENGTH * massValue) / r2;
+  return { x: x + f*vx, y: y + f*vy };
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  for(let gx=0; gx<=canvas.width; gx+=GRID_SPACING){
+    ctx.beginPath();
+    for(let y=0; y<=canvas.height; y+=6){
+      const p = warpPoint(gx,y);
+      if(y===0) ctx.moveTo(p.x,p.y);
+      else ctx.lineTo(p.x,p.y);
+    }
+    ctx.strokeStyle="rgba(200,200,200,0.4)";
+    ctx.stroke();
+  }
+
+  for(let gy=0; gy<=canvas.height; gy+=GRID_SPACING){
+    ctx.beginPath();
+    for(let x=0; x<=canvas.width; x+=6){
+      const p = warpPoint(x,gy);
+      if(x===0) ctx.moveTo(p.x,p.y);
+      else ctx.lineTo(p.x,p.y);
+    }
+    ctx.strokeStyle="rgba(200,200,200,0.4)";
+    ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.arc(mass.x, mass.y, 18, 0, Math.PI*2);
+  ctx.fillStyle="rgba(255,230,190,0.9)";
+  ctx.fill();
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
 
 </body>
 </html>
