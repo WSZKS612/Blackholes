@@ -188,7 +188,56 @@ h1{
 .hoverBtn:hover .pop{
   display:block; /* 👈 Only show on hover */
 }
+
+/* --- Example Accordion --- */
+
+.exampleSection{
+  margin-top:40px;
 }
+
+details{
+  margin-bottom:28px;   /* 👈 creates space below each button */
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(0,0,0,0.28);
+  padding:0;
+  overflow:hidden;
+}
+
+summary{
+  list-style:none;
+  cursor:pointer;
+  padding:16px 18px;
+  font-size:16px;
+  font-weight:600;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+summary::-webkit-details-marker{
+  display:none; /* removes default arrow */
+}
+
+/* custom arrow */
+.summaryArrow{
+  transition:transform 0.25s ease;
+  font-size:14px;
+  opacity:0.7;
+}
+
+details[open] .summaryArrow{
+  transform:rotate(180deg);
+}
+
+/* content area */
+.exampleContent{
+  padding:18px;
+  line-height:1.65;
+  font-size:15px;
+  border-top:1px solid rgba(255,255,255,0.10);
+}
+
 </style>
 </head>
 
@@ -271,6 +320,95 @@ theoretical models that are mathematically interesting but lack observational pr
       </div>
     </div>
   </div>
+</section>
+
+<!-- EXAMPLES SECTION -->
+<section class="exampleSection">
+
+  <details>
+    <summary>
+      Example 1 – ‘Blackholes are a Portal to Another Dimension’
+      <span class="summaryArrow">▼</span>
+    </summary>
+
+    <div class="exampleContent">
+      <strong>Could Black Holes Be Portals to Other Universes?</strong><br><br>
+
+      This article, published by Popular Mechanics, makes the claim,
+      ‘Blackholes could be back doors to other universes’. It discusses
+      the ideas of theoretical physicist Nikodem Popławski, that blackholes
+      may not end in a singularity but instead form a wormhole.
+
+      <br><br>
+
+      The theory is based off a concept called torsion. However, the article asserts that,
+      ‘cosmological torsion is not something that science has proven.’
+      This is supported by observation with the study [1], which found no evidence
+      for torsion through cosmological observation.
+
+      <br><br>
+
+      The article fails to adequately explore the issues with Popławski’s theory,
+      despite the fact that torsion-based extensions lie outside the accepted model
+      of the Universe and are unsupported through empiricism. The use of exotic
+      terminology such as “wormholes” and “alternate universes” appeals through
+      impressive-sounding language rather than grounded scientific consensus.
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      Example 2 – ‘Time stops inside a blackhole’
+      <span class="summaryArrow">▼</span>
+    </summary>
+
+    <div class="exampleContent">
+      <strong>ceointellect – themysteryoftime</strong><br><br>
+
+      This website makes the assertion that ‘we must say that time stops
+      inside of each black hole’, a claim that misinterprets Einstein’s
+      theory of general relativity [2].
+
+      <br><br>
+
+      The author states that, inside a blackhole exists an infinite
+      gravitational field and so, ‘no further change can take place,
+      and no physical process can go on that would give meaning to time.
+      Thus, the theory simply asserts that time stops.’
+
+      <br><br>
+
+      While correct in saying the infinitely large gravitational field
+      inside a blackhole can have a strange impact on time, relativity
+      tells us that time would not stop from all reference frames.
+      Time dilation depends on the observer’s frame of reference —
+      an external observer sees extreme slowing near the event horizon,
+      but locally, time continues normally for an infalling observer.
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      Example 3 – ‘Blackholes do not exist’
+      <span class="summaryArrow">▼</span>
+    </summary>
+
+    <div class="exampleContent">
+      <strong>Researcher shows that black holes do not exist</strong><br><br>
+
+      The article frames speculative ideas about reconciling quantum theory
+      with general relativity as definitive proof that black holes cannot form,
+      despite strong observational evidence for black holes.
+
+      <br><br>
+
+      This includes gravitational waves detected from black hole mergers,
+      as well as direct imaging of event horizons. The broader scientific
+      consensus overwhelmingly supports the existence of black holes based
+      on extensive empirical data.
+    </div>
+  </details>
+
 </section>
 
 <div class="card">
