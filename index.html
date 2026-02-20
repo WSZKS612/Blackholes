@@ -23,13 +23,13 @@
       display:block;
     }
 
-    /* Minimal UI: sliders + reset + star/BH toggle buttons */
+    /* Minimal UI: Mass slider + Star/BH buttons + Reset */
     .ui{
       position:fixed;
       left:50%;
       bottom:18px;
       transform:translateX(-50%);
-      width:min(920px, calc(100vw - 28px));
+      width:min(760px, calc(100vw - 28px));
       z-index:10;
       pointer-events:auto;
       display:flex;
@@ -41,18 +41,13 @@
       background:rgba(0,0,0,0.30);
       backdrop-filter: blur(10px);
     }
-    .sliders{
+
+    .massWrap{
       flex:1;
-      display:grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap:10px;
       min-width:0;
-    }
-    label{
       display:flex;
       flex-direction:column;
       gap:6px;
-      min-width:0;
       font-size:11px;
       letter-spacing:0.14em;
       text-transform:uppercase;
@@ -69,6 +64,7 @@
       opacity:0.72;
       letter-spacing:0.08em;
     }
+
     .btn{
       height:52px;
       padding:0 14px;
@@ -90,9 +86,8 @@
       border-color:rgba(125,195,255,0.35);
     }
 
-    @media (max-width: 880px){
-      .sliders{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .btn{ height:48px; }
+    @media (max-width: 720px){
+      .btn{ height:48px; padding:0 12px; }
     }
   </style>
 </head>
@@ -101,40 +96,25 @@
 <canvas id="c"></canvas>
 
 <div class="ui" aria-label="Simulation controls">
-  <div class="sliders">
-    <label>
-      Mass
-      <input id="mass" type="range" min="0.2" max="12" step="0.01" value="2.5" />
-      <div class="vals"><span id="massVal">2.50</span><span>m</span></div>
-    </label>
-
-    <label>
-      Warp
-      <input id="strength" type="range" min="10" max="420" step="1" value="150" />
-      <div class="vals"><span id="strengthVal">150</span><span>k</span></div>
-    </label>
-
-    <label>
-      Softening
-      <input id="softening" type="range" min="6" max="90" step="1" value="30" />
-      <div class="vals"><span id="softeningVal">30</span><span>px</span></div>
-    </label>
-
-    <label>
-      Grid
-      <input id="spacing" type="range" min="18" max="85" step="1" value="40" />
-      <div class="vals"><span id="spacingVal">40</span><span>px</span></div>
-    </label>
+  <div class="massWrap">
+    MASS
+    <input id="mass" type="range" min="0.2" max="12" step="0.01" value="2.5" />
+    <div class="vals"><span id="massVal">2.50</span><span>m</span></div>
   </div>
 
   <button class="btn" id="starBtn" title="Finite warp (softened)">Star</button>
   <button class="btn" id="bhBtn" title="Infinite warp (visual singularity)">Black hole</button>
-  <button class="btn" id="reset" title="Reset view">Reset</button>
+  <button class="btn" id="reset" title="Reset">Reset</button>
 </div>
 
 <script>
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
+
+  // Fixed parameters (as requested)
+  const GRID_SPACING = 36;   // px
+  const WARP_STRENGTH = 244; // k
+  const SOFTENING = 25;      // px (star mode)
 
   function resize(){
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -146,22 +126,20 @@
   window.addEventListener("resize", resize);
   resize();
 
-  // UI elements
+  // UI
   const massEl = document.getElementById("mass");
-  const strengthEl = document.getElementById("strength");
-  const softeningEl = document.getElementById("softening");
-  const spacingEl = document.getElementById("spacing");
-
   const massVal = document.getElementById("massVal");
-  const strengthVal = document.getElementById("strengthVal");
-  const softeningVal = document.getElementById("softeningVal");
-  const spacingVal = document.getElementById("spacingVal");
-
   const starBtn = document.getElementById("starBtn");
   const bhBtn = document.getElementById("bhBtn");
   const resetBtn = document.getElementById("reset");
 
-  // Mode: "star" uses softening; "bh" ignores softening and approaches singularity
+  function updateMassLabel(){
+    massVal.textContent = (+massEl.value).toFixed(2);
+  }
+  massEl.addEventListener("input", updateMassLabel);
+  updateMassLabel();
+
+  // Mode: "star" uses fixed softening, "bh" ignores softening (visual singularity)
   let mode = "star";
   function setMode(newMode){
     mode = newMode;
@@ -170,18 +148,8 @@
   }
   setMode("star");
 
-  function updateLabels(){
-    massVal.textContent = (+massEl.value).toFixed(2);
-    strengthVal.textContent = strengthEl.value;
-    softeningVal.textContent = softeningEl.value;
-    spacingVal.textContent = spacingEl.value;
-  }
-  [massEl, strengthEl, softeningEl, spacingEl].forEach(el => el.addEventListener("input", updateLabels));
-  updateLabels();
-
   // One draggable mass
   const mass = { x: 0, y: 0 };
-
   function resetMassPos(){
     const w = canvas.clientWidth, h = canvas.clientHeight;
     mass.x = w * 0.42;
@@ -229,7 +197,7 @@
   canvas.addEventListener("pointerup", () => dragging = false);
   canvas.addEventListener("pointercancel", () => dragging = false);
 
-  // Simple starfield
+  // Starfield
   function drawStars(w,h){
     ctx.fillStyle = "rgba(255,255,255,0.08)";
     for (let i=0;i<160;i++){
@@ -239,29 +207,23 @@
     }
   }
 
-  // Warp model (2D displacement field)
-  // For each point p: displacement d = -k*m*(p - M)/(|p - M|^2 + a^2)
-  // Star mode: a from slider.
-  // Black hole mode: a ~= 0 (epsilon only), so it becomes "infinite" near center (visual singularity).
+  // Warp field (2D displacement)
   function warpPoint(x, y){
-    const k = +strengthEl.value;
+    const k = WARP_STRENGTH;
     const m = +massEl.value;
 
     const vx = x - mass.x;
     const vy = y - mass.y;
 
-    let a = +softeningEl.value;
-    if (mode === "bh") a = 0; // black hole: no softening
+    const a = (mode === "bh") ? 0 : SOFTENING; // BH: no softening
 
-    // epsilon prevents division-by-zero for BH mode but still explodes near center
-    const eps = 1e-6;
+    const eps = 1e-6; // prevent division-by-zero
     const r2 = vx*vx + vy*vy + a*a + eps;
 
     const f = -(k * m) / r2;
 
-    // Clamp displacement so lines don't shoot off to infinity (keeps it drawable),
-    // but the field is still effectively "infinite" at the center (lines pile up).
-    const maxDisp = 2400;
+    // Clamp displacement so it remains drawable (BH still behaves "infinite" near center visually)
+    const maxDisp = 2600;
     let dx = f * vx;
     let dy = f * vy;
     const mag = Math.hypot(dx, dy);
@@ -280,14 +242,13 @@
     ctx.fillRect(0,0,w,h);
     drawStars(w,h);
 
-    const spacing = +spacingEl.value;
+    const spacing = GRID_SPACING;
     const step = Math.max(6, Math.min(16, spacing / 3));
 
-    // Grid lines
     ctx.lineWidth = 1.1;
 
     // vertical
-    for (let gx = Math.floor(0/spacing)*spacing; gx <= w; gx += spacing){
+    for (let gx = 0; gx <= w; gx += spacing){
       ctx.beginPath();
       let first = true;
       for (let y = 0; y <= h; y += step){
@@ -300,7 +261,7 @@
     }
 
     // horizontal
-    for (let gy = Math.floor(0/spacing)*spacing; gy <= h; gy += spacing){
+    for (let gy = 0; gy <= h; gy += spacing){
       ctx.beginPath();
       let first = true;
       for (let x = 0; x <= w; x += step){
@@ -319,7 +280,7 @@
     // glow
     ctx.beginPath();
     ctx.arc(mass.x, mass.y, r*2.2, 0, Math.PI*2);
-    ctx.fillStyle = mode === "bh"
+    ctx.fillStyle = (mode === "bh")
       ? "rgba(120,190,255,0.10)"
       : "rgba(255,230,170,0.10)";
     ctx.fill();
@@ -327,7 +288,7 @@
     // core
     ctx.beginPath();
     ctx.arc(mass.x, mass.y, r, 0, Math.PI*2);
-    ctx.fillStyle = mode === "bh"
+    ctx.fillStyle = (mode === "bh")
       ? "rgba(5,7,12,0.98)"
       : "rgba(255,230,190,0.95)";
     ctx.fill();
@@ -339,7 +300,7 @@
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // extra ring for BH look
+    // extra ring for BH
     if (mode === "bh"){
       ctx.beginPath();
       ctx.arc(mass.x, mass.y, r*1.55, 0, Math.PI*2);
