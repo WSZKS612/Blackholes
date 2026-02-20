@@ -3,381 +3,598 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D Spacetime Warp (Interactive)</title>
+  <title>Spacetime Warp Lab</title>
   <style>
     :root { color-scheme: dark; }
+
+    * { box-sizing: border-box; }
+
     body{
       margin:0;
       height:100vh;
-      display:grid;
-      grid-template-rows:auto 1fr;
-      background:#02040a;
+      background:#000;
       color:#eaf2ff;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      overflow:hidden;
     }
-    header{
+
+    /* ====== Canvas fills screen ====== */
+    canvas{
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100vh;
+      display:block;
+    }
+
+    /* ====== Top bar ====== */
+    .topbar{
+      position:fixed;
+      top:0; left:0; right:0;
+      height:68px;
       display:flex;
-      flex-wrap:wrap;
-      gap:12px;
       align-items:center;
+      justify-content:space-between;
+      padding:0 22px;
+      z-index:10;
+      pointer-events:none; /* let canvas receive drag unless on interactive elements */
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      letter-spacing:0.18em;
+      font-weight:600;
+      opacity:0.92;
+      pointer-events:auto;
+    }
+    .brand .box{
+      width:28px; height:44px;
+      border:2px solid rgba(255,255,255,0.85);
+      display:grid;
+      place-items:center;
+      font-size:10px;
+      letter-spacing:0.10em;
+      opacity:0.85;
+    }
+    .brand .title{
+      font-size:42px;
+      font-weight:300;
+      letter-spacing:0.12em;
+      line-height:1;
+    }
+    .menuDot{
+      width:28px; height:28px;
+      display:grid;
+      place-items:center;
+      border:1px solid rgba(255,255,255,0.22);
+      border-radius:8px;
+      opacity:0.85;
+      pointer-events:auto;
+    }
+    .menuDot::before{
+      content:"⋮";
+      font-size:18px;
+      transform: translateY(-1px);
+    }
+
+    /* ====== Bottom-left Observations panel ====== */
+    .panel{
+      position:fixed;
+      left:22px;
+      bottom:28px;
+      width:min(520px, calc(100vw - 44px));
+      z-index:10;
+      pointer-events:none;
+    }
+    .panel .heading{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom:10px;
+      opacity:0.92;
+      pointer-events:auto;
+    }
+    .eye{
+      width:18px; height:18px;
+      border:1.5px solid rgba(255,255,255,0.7);
+      border-radius:999px;
+      position:relative;
+      opacity:0.85;
+    }
+    .eye::after{
+      content:"";
+      position:absolute;
+      left:50%; top:50%;
+      width:5px; height:5px;
+      background:rgba(255,255,255,0.75);
+      border-radius:999px;
+      transform:translate(-50%,-50%);
+    }
+    .panel .heading span{
+      letter-spacing:0.18em;
+      font-size:15px;
+      text-transform:uppercase;
+    }
+    .panel .body{
+      font-size:18px;
+      line-height:1.4;
+      max-width:46ch;
+      opacity:0.78;
+      pointer-events:auto;
+    }
+
+    /* ====== Bottom center controls ====== */
+    .controls{
+      position:fixed;
+      left:50%;
+      bottom:24px;
+      transform:translateX(-50%);
+      display:flex;
+      align-items:center;
+      gap:14px;
+      z-index:10;
+      pointer-events:auto;
+    }
+    .pill{
+      display:flex;
+      align-items:center;
+      gap:10px;
       padding:10px 12px;
-      background:rgba(10,16,30,0.82);
-      border-bottom:1px solid rgba(255,255,255,0.10);
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:rgba(0,0,0,0.35);
       backdrop-filter: blur(10px);
     }
-    .group{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    label{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:6px 10px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.12);
-      background:rgba(255,255,255,0.05);
-    }
-    input[type="range"]{ width:180px; }
-    .btn{
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.14);
-      background:rgba(255,255,255,0.06);
+    .iconBtn{
+      width:44px; height:44px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:rgba(0,0,0,0.35);
       color:inherit;
       cursor:pointer;
-      user-select:none;
+      display:grid;
+      place-items:center;
+      backdrop-filter: blur(10px);
     }
-    .btn:hover{ background:rgba(255,255,255,0.10); }
-    canvas{ width:100%; height:100%; display:block; }
-    .badge{
-      font-size:12px;
-      padding:3px 8px;
+    .iconBtn:hover{ background:rgba(255,255,255,0.06); }
+
+    .record{
+      width:60px; height:60px;
       border-radius:999px;
-      background:rgba(123,190,255,0.12);
-      border:1px solid rgba(123,190,255,0.25);
-      color:#cfe8ff;
+      border:1px solid rgba(255,255,255,0.22);
+      display:grid;
+      place-items:center;
+      background:rgba(0,0,0,0.35);
     }
-    .hint{ opacity:0.85; font-size:0.92rem; }
+    .record .dot{
+      width:16px; height:16px;
+      border-radius:999px;
+      background:#ff2a2a;
+      box-shadow: 0 0 18px rgba(255,42,42,0.65);
+    }
+
+    /* ====== Right side zoom buttons ====== */
+    .rightStack{
+      position:fixed;
+      right:18px;
+      bottom:120px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      z-index:10;
+      pointer-events:auto;
+    }
+    .zoomBtn{
+      width:56px; height:56px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:rgba(0,0,0,0.35);
+      color:inherit;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      backdrop-filter: blur(10px);
+      font-size:22px;
+      line-height:1;
+    }
+    .zoomBtn:hover{ background:rgba(255,255,255,0.06); }
+
+    /* ====== Slider strip (subtle) ====== */
+    .sliderStrip{
+      position:fixed;
+      left:50%;
+      bottom:96px;
+      transform:translateX(-50%);
+      width:min(640px, calc(100vw - 40px));
+      z-index:10;
+      pointer-events:auto;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:10px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(0,0,0,0.25);
+      backdrop-filter: blur(10px);
+    }
+    .sliderStrip label{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      flex:1;
+      min-width:0;
+      font-size:12px;
+      letter-spacing:0.14em;
+      text-transform:uppercase;
+      opacity:0.85;
+    }
+    input[type="range"]{
+      width:100%;
+      accent-color: #7dc3ff;
+    }
+    .vals{
+      display:flex;
+      justify-content:space-between;
+      font-size:11px;
+      opacity:0.7;
+      letter-spacing:0.08em;
+    }
+
+    /* Mobile: make panel smaller */
+    @media (max-width: 520px){
+      .brand .title{ font-size:34px; }
+      .panel .body{ font-size:16px; }
+      .sliderStrip{ bottom:104px; }
+      .controls{ bottom:18px; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div class="group">
-      <span class="badge">Drag the mass • Drag empty space to rotate • Scroll to zoom</span>
-    </div>
-
-    <div class="group">
-      <label title="Change the mass (bigger = deeper 'well')">
-        Mass
-        <input id="mass" type="range" min="0.2" max="12" step="0.01" value="2.5" />
-        <span id="massVal"></span>
-      </label>
-
-      <label title="Overall warping strength (visual scale)">
-        Warp strength
-        <input id="strength" type="range" min="30" max="500" step="1" value="180" />
-        <span id="strengthVal"></span>
-      </label>
-
-      <label title="Softening prevents an infinite spike at the center; larger = smoother (less extreme) near the mass">
-        Softening
-        <input id="softening" type="range" min="6" max="70" step="1" value="26" />
-        <span id="softeningVal"></span>
-      </label>
-
-      <label title="Grid spacing (bigger = fewer lines, faster)">
-        Grid
-        <input id="spacing" type="range" min="18" max="70" step="1" value="34" />
-        <span id="spacingVal"></span>
-      </label>
-
-      <button class="btn" id="reset">Reset view</button>
-    </div>
-
-    <div class="hint">Plane fills the screen; tilt it toward you and adjust softening to control how extreme the dent becomes.</div>
-  </header>
 
   <canvas id="c"></canvas>
 
-  <script>
-    const canvas = document.getElementById("c");
-    const ctx = canvas.getContext("2d");
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="box">LAB</div>
+      <div class="title">LAB</div>
+    </div>
+    <div class="menuDot" title="Menu (visual only)"></div>
+  </div>
 
-    // HiDPI
-    function resize(){
-      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-      const r = canvas.getBoundingClientRect();
-      canvas.width = Math.floor(r.width * dpr);
-      canvas.height = Math.floor(r.height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
-    }
-    window.addEventListener("resize", resize);
-    resize();
+  <!-- Observations panel -->
+  <div class="panel">
+    <div class="heading">
+      <div class="eye"></div>
+      <span>Observations</span>
+    </div>
+    <div class="body" id="obsText">
+      A more massive object creates a deeper distortion in space-time, bending nearby paths more strongly.
+      Drag the mass to move it, and adjust the sliders to compare different strengths of curvature.
+    </div>
+  </div>
 
-    // UI
-    const massEl = document.getElementById("mass");
-    const strengthEl = document.getElementById("strength");
-    const softeningEl = document.getElementById("softening");
-    const spacingEl = document.getElementById("spacing");
-    const massVal = document.getElementById("massVal");
-    const strengthVal = document.getElementById("strengthVal");
-    const softeningVal = document.getElementById("softeningVal");
-    const spacingVal = document.getElementById("spacingVal");
+  <!-- Slider strip -->
+  <div class="sliderStrip" aria-label="Simulation controls">
+    <label>
+      Mass
+      <input id="mass" type="range" min="0.2" max="12" step="0.01" value="2.5" />
+      <div class="vals"><span id="massVal">2.50</span><span>m</span></div>
+    </label>
 
-    function updateLabels(){
-      massVal.textContent = (+massEl.value).toFixed(2);
-      strengthVal.textContent = strengthEl.value;
-      softeningVal.textContent = softeningEl.value + "px";
-      spacingVal.textContent = spacingEl.value + "px";
-    }
-    [massEl, strengthEl, softeningEl, spacingEl].forEach(el => el.addEventListener("input", updateLabels));
-    updateLabels();
+    <label>
+      Warp
+      <input id="strength" type="range" min="30" max="500" step="1" value="180" />
+      <div class="vals"><span id="strengthVal">180</span><span>k</span></div>
+    </label>
 
-    // One mass (draggable)
-    const mass = { x: 0, y: 0, m: +massEl.value };
+    <label>
+      Softening
+      <input id="softening" type="range" min="6" max="70" step="1" value="26" />
+      <div class="vals"><span id="softeningVal">26</span><span>px</span></div>
+    </label>
 
-    function resetMassPos(){
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      mass.x = w * 0.34;
-      mass.y = h * 0.44;
-    }
+    <label>
+      Grid
+      <input id="spacing" type="range" min="18" max="70" step="1" value="34" />
+      <div class="vals"><span id="spacingVal">34</span><span>px</span></div>
+    </label>
+  </div>
+
+  <!-- Bottom center controls (visual-style like the reference) -->
+  <div class="controls">
+    <button class="iconBtn" id="reset" title="Reset view">⟲</button>
+    <div class="record" title="Record (visual only)"><div class="dot"></div></div>
+    <button class="iconBtn" id="mute" title="Sound (visual only)">🔈</button>
+  </div>
+
+  <!-- Right stack zoom buttons -->
+  <div class="rightStack">
+    <button class="zoomBtn" id="zoomIn" title="Zoom in">+</button>
+    <button class="zoomBtn" id="zoomOut" title="Zoom out">−</button>
+  </div>
+
+<script>
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+
+  // HiDPI
+  function resize(){
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const r = canvas.getBoundingClientRect();
+    canvas.width = Math.floor(r.width * dpr);
+    canvas.height = Math.floor(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // UI
+  const massEl = document.getElementById("mass");
+  const strengthEl = document.getElementById("strength");
+  const softeningEl = document.getElementById("softening");
+  const spacingEl = document.getElementById("spacing");
+
+  const massVal = document.getElementById("massVal");
+  const strengthVal = document.getElementById("strengthVal");
+  const softeningVal = document.getElementById("softeningVal");
+  const spacingVal = document.getElementById("spacingVal");
+
+  function updateLabels(){
+    massVal.textContent = (+massEl.value).toFixed(2);
+    strengthVal.textContent = strengthEl.value;
+    softeningVal.textContent = softeningEl.value;
+    spacingVal.textContent = spacingEl.value;
+  }
+  [massEl, strengthEl, softeningEl, spacingEl].forEach(el => el.addEventListener("input", updateLabels));
+  updateLabels();
+
+  // One mass (draggable)
+  const mass = { x: 0, y: 0 };
+  function resetMassPos(){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    mass.x = w * 0.38;
+    mass.y = h * 0.46;
+  }
+  resetMassPos();
+
+  // Camera: slight tilt toward viewer (like reference), full-width plane
+  let cam = {
+    yaw: 0.05,     // subtle side rotation (almost centered)
+    pitch: 0.78,   // tilt toward viewer (smaller -> more toward viewer)
+    zoom: 1.0,
+    dist: 900
+  };
+
+  // Buttons
+  document.getElementById("reset").addEventListener("click", () => {
+    cam.yaw = 0.05;
+    cam.pitch = 0.78;
+    cam.zoom = 1.0;
     resetMassPos();
+  });
+  document.getElementById("zoomIn").addEventListener("click", () => {
+    cam.zoom = Math.min(2.6, cam.zoom * 1.12);
+  });
+  document.getElementById("zoomOut").addEventListener("click", () => {
+    cam.zoom = Math.max(0.55, cam.zoom * 0.90);
+  });
 
-    // Camera: tilt toward viewer; allow slight rotation with drag-empty-space
-    let cam = {
-      yaw: 0.18,      // slight sideways rotation
-      pitch: 0.95,    // tilt toward viewer (lower = more toward viewer)
-      zoom: 1.0,
-      dist: 760
-    };
+  // Drag to move mass OR rotate (drag empty space)
+  let pointerDown = false;
+  let draggingMass = false;
+  let last = { x: 0, y: 0 };
+  let dragOffset = { x: 0, y: 0 };
 
-    document.getElementById("reset").addEventListener("click", () => {
-      cam.yaw = 0.18;
-      cam.pitch = 0.95;
-      cam.zoom = 1.0;
-      resetMassPos();
-    });
+  function pos(ev){
+    const r = canvas.getBoundingClientRect();
+    return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+  }
+  function hitMass(p){
+    const r = 16 + 7 * Math.sqrt(+massEl.value);
+    const dx = p.x - mass.x, dy = p.y - mass.y;
+    return (dx*dx + dy*dy) <= r*r;
+  }
 
-    // Interaction: drag mass OR rotate
-    let pointerDown = false;
-    let draggingMass = false;
-    let last = { x: 0, y: 0 };
-    let dragOffset = { x: 0, y: 0 };
-
-    function pos(ev){
-      const r = canvas.getBoundingClientRect();
-      return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+  canvas.addEventListener("pointerdown", (ev) => {
+    canvas.setPointerCapture(ev.pointerId);
+    pointerDown = true;
+    const p = pos(ev);
+    last = p;
+    if (hitMass(p)){
+      draggingMass = true;
+      dragOffset.x = p.x - mass.x;
+      dragOffset.y = p.y - mass.y;
+    } else {
+      draggingMass = false;
     }
+  });
 
-    function hitMass(p){
-      const r = 16 + 7 * Math.sqrt(+massEl.value);
-      const dx = p.x - mass.x, dy = p.y - mass.y;
-      return (dx*dx + dy*dy) <= r*r;
+  canvas.addEventListener("pointermove", (ev) => {
+    if (!pointerDown) return;
+    const p = pos(ev);
+    const dx = p.x - last.x;
+    const dy = p.y - last.y;
+    last = p;
+
+    if (draggingMass){
+      mass.x = p.x - dragOffset.x;
+      mass.y = p.y - dragOffset.y;
+    } else {
+      cam.yaw += dx * 0.005;
+      cam.pitch += dy * 0.005;
+      cam.pitch = Math.max(0.55, Math.min(1.15, cam.pitch));
     }
+  });
 
-    canvas.addEventListener("pointerdown", (ev) => {
-      canvas.setPointerCapture(ev.pointerId);
-      pointerDown = true;
-      const p = pos(ev);
-      last = p;
-      if (hitMass(p)){
-        draggingMass = true;
-        dragOffset.x = p.x - mass.x;
-        dragOffset.y = p.y - mass.y;
-      } else {
-        draggingMass = false; // rotate
-      }
-    });
+  canvas.addEventListener("pointerup", () => { pointerDown = false; draggingMass = false; });
+  canvas.addEventListener("pointercancel", () => { pointerDown = false; draggingMass = false; });
 
-    canvas.addEventListener("pointermove", (ev) => {
-      if (!pointerDown) return;
-      const p = pos(ev);
-      const dx = p.x - last.x;
-      const dy = p.y - last.y;
-      last = p;
+  // Wheel zoom
+  canvas.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const dir = Math.sign(ev.deltaY);
+    cam.zoom *= (dir > 0) ? 0.92 : 1.08;
+    cam.zoom = Math.max(0.55, Math.min(2.6, cam.zoom));
+  }, { passive:false });
 
-      if (draggingMass){
-        mass.x = p.x - dragOffset.x;
-        mass.y = p.y - dragOffset.y;
-      } else {
-        cam.yaw += dx * 0.006;
-        cam.pitch += dy * 0.006;
-        cam.pitch = Math.max(0.50, Math.min(1.25, cam.pitch)); // keep sensible tilt
-      }
-    });
+  // --- 3D math ---
+  function rotateY(v, a){
+    const ca = Math.cos(a), sa = Math.sin(a);
+    return { x: v.x * ca + v.z * sa, y: v.y, z: -v.x * sa + v.z * ca };
+  }
+  function rotateX(v, a){
+    const ca = Math.cos(a), sa = Math.sin(a);
+    return { x: v.x, y: v.y * ca - v.z * sa, z: v.y * sa + v.z * ca };
+  }
+  function project(v, w, h){
+    const vz = v.z + 260;         // lift the sheet a touch
+    const d = cam.dist / cam.zoom;
+    const s = d / (d + vz);
+    return { x: w/2 + v.x * s, y: h/2 + v.y * s, s };
+  }
 
-    canvas.addEventListener("pointerup", () => { pointerDown = false; draggingMass = false; });
-    canvas.addEventListener("pointercancel", () => { pointerDown = false; draggingMass = false; });
+  // Warping (adjustable softening):
+  // z = -k * m / sqrt(r^2 + a^2)
+  function sheetZ(wx, wy){
+    const k = +strengthEl.value;
+    const m = +massEl.value;
 
-    // Zoom
-    canvas.addEventListener("wheel", (ev) => {
-      ev.preventDefault();
-      const dir = Math.sign(ev.deltaY);
-      cam.zoom *= (dir > 0) ? 0.92 : 1.08;
-      cam.zoom = Math.max(0.55, Math.min(2.4, cam.zoom));
-    }, { passive:false });
+    const w = canvas.clientWidth, h = canvas.clientHeight;
 
-    // --- 3D math ---
-    // World coords:
-    // X: left/right, Y: forward/back, Z: up (sheet dips to negative Z).
-    function rotateY(v, a){
-      const ca = Math.cos(a), sa = Math.sin(a);
-      return { x: v.x * ca + v.z * sa, y: v.y, z: -v.x * sa + v.z * ca };
+    // World scaling chosen so the plane spans full width (like the reference)
+    const worldScale = 1.0 / (Math.max(w,h) / 740);
+
+    // Softening in world units
+    const a = (+softeningEl.value) * worldScale;
+
+    // Mass in world coords
+    const mx = (mass.x - w/2) * worldScale;
+    const my = (mass.y - h/2) * worldScale;
+
+    const dx = wx - mx;
+    const dy = wy - my;
+    const r2 = dx*dx + dy*dy;
+
+    // Less aggressive by default, and still controllable via k and a
+    let z = -(k * m) / Math.sqrt(r2 + a*a);
+
+    // Clamp to avoid runaway “tube” (still allows strong warp at high mass)
+    const zMin = -1400;
+    if (z < zMin) z = zMin;
+
+    return z;
+  }
+
+  // Starfield
+  function drawStars(w,h){
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    for (let i=0;i<140;i++){
+      const x = (i*137) % w;
+      const y = (i*227) % h;
+      ctx.fillRect(x, y, 1, 1);
     }
-    function rotateX(v, a){
-      const ca = Math.cos(a), sa = Math.sin(a);
-      return { x: v.x, y: v.y * ca - v.z * sa, z: v.y * sa + v.z * ca };
-    }
+  }
 
-    function project(v, w, h){
-      // Perspective projection
-      const vz = v.z + 240; // lift sheet so you see both surface + dent
-      const d = cam.dist / cam.zoom;
-      const s = d / (d + vz);
-      return { x: w/2 + v.x * s, y: h/2 + v.y * s, s };
-    }
+  function draw(){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
 
-    // Surface displacement with softening (adjustable) like earlier:
-    // z = -A * m / sqrt(r^2 + soft^2)
-    function sheetZ(wx, wy){
-      const softPx = +softeningEl.value;
-      const A = +strengthEl.value;
-      const m = +massEl.value;
+    // Background
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0,0,w,h);
+    drawStars(w,h);
 
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      const worldScale = 1.0 / (Math.max(w,h) / 620); // keep plane wide
-      const soft = softPx * worldScale;
+    const spacingPx = +spacingEl.value;
+    const stepPx = Math.max(6, Math.min(14, spacingPx / 3));
 
-      // mass position in world coords
-      const mx = (mass.x - w/2) * worldScale;
-      const my = (mass.y - h/2) * worldScale;
+    const worldScale = 1.0 / (Math.max(w,h) / 740);
+    const spacingW = spacingPx * worldScale;
+    const stepW = stepPx * worldScale;
 
-      const dx = wx - mx;
-      const dy = wy - my;
-      const r2 = dx*dx + dy*dy;
+    // Plane extents: wider than screen so it fills the full width with perspective
+    const halfW = (w/2) * worldScale * 1.65;
+    const halfH = (h/2) * worldScale * 1.05;
 
-      // main "dent"
-      let z = -(A * m) / Math.sqrt(r2 + soft*soft);
+    const yaw = cam.yaw;
+    const pitch = cam.pitch;
 
-      // clamp to avoid insane extreme tubes at high mass
-      const zMin = -1800;
-      if (z < zMin) z = zMin;
+    ctx.lineWidth = 1.2;
 
-      return z;
-    }
-
-    // Simple starfield dots
-    function drawStars(w,h){
-      ctx.fillStyle = "rgba(255,255,255,0.12)";
-      for (let i=0;i<80;i++){
-        const x = (i*97) % w;
-        const y = (i*193) % h;
-        ctx.fillRect(x, y, 1, 1);
-      }
-    }
-
-    function draw(){
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-
-      // Background
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, w, h);
-      drawStars(w,h);
-
-      // World scaling: choose extents so plane fills full width like the reference
-      const worldScale = 1.0 / (Math.max(w,h) / 620);
-
-      // Grid spacing in world units
-      const spacingPx = +spacingEl.value;
-      const spacingW = spacingPx * worldScale;
-
-      // Full-width plane: extend a bit beyond edges to ensure it fills screen
-      const halfW = (w/2) * worldScale * 1.35; // wider than screen
-      const halfH = (h/2) * worldScale * 0.95; // fairly deep
-
-      // Sampling
-      const stepPx = Math.max(6, Math.min(14, spacingPx / 3));
-      const stepW = stepPx * worldScale;
-
-      const yaw = cam.yaw;
-      const pitch = cam.pitch;
-
-      // Grid drawing
-      ctx.lineWidth = 1.25;
-      ctx.strokeStyle = "rgba(200,200,200,0.45)";
-
-      function drawPolyline(points, alpha){
-        if (points.length < 2) return;
-        ctx.strokeStyle = `rgba(200,200,200,${alpha})`;
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i=1;i<points.length;i++) ctx.lineTo(points[i].x, points[i].y);
-        ctx.stroke();
-      }
-
-      // Vertical lines
-      for (let gx = -halfW; gx <= halfW; gx += spacingW){
-        const pts = [];
-        for (let y = -halfH; y <= halfH; y += stepW){
-          const z = sheetZ(gx, y);
-          let v = { x: gx, y, z };
-          v = rotateY(v, yaw);
-          v = rotateX(v, pitch);
-          const p = project(v, w, h);
-          pts.push(p);
-        }
-        const mid = pts[(pts.length/2)|0];
-        const alpha = 0.20 + 0.35 * Math.max(0, Math.min(1, mid.s));
-        drawPolyline(pts, alpha);
-      }
-
-      // Horizontal lines
-      for (let gy = -halfH; gy <= halfH; gy += spacingW){
-        const pts = [];
-        for (let x = -halfW; x <= halfW; x += stepW){
-          const z = sheetZ(x, gy);
-          let v = { x, y: gy, z };
-          v = rotateY(v, yaw);
-          v = rotateX(v, pitch);
-          const p = project(v, w, h);
-          pts.push(p);
-        }
-        const mid = pts[(pts.length/2)|0];
-        const alpha = 0.18 + 0.32 * Math.max(0, Math.min(1, mid.s));
-        drawPolyline(pts, alpha);
-      }
-
-      // Mass marker (screen space)
-      const M = +massEl.value;
-      const radius = 18 + 7 * Math.sqrt(M);
-
-      // glow
+    function strokeLine(pts, alpha){
+      if (pts.length < 2) return;
+      ctx.strokeStyle = `rgba(190,190,190,${alpha})`;
       ctx.beginPath();
-      ctx.arc(mass.x, mass.y, radius*2.2, 0, Math.PI*2);
-      ctx.fillStyle = "rgba(255,230,170,0.12)";
-      ctx.fill();
-
-      // body
-      ctx.beginPath();
-      ctx.arc(mass.x, mass.y, radius, 0, Math.PI*2);
-      ctx.fillStyle = "rgba(255,230,190,0.95)";
-      ctx.fill();
-
-      // outline
-      ctx.beginPath();
-      ctx.arc(mass.x, mass.y, radius, 0, Math.PI*2);
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = 2;
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
       ctx.stroke();
-
-      // label
-      ctx.font = "14px system-ui, sans-serif";
-      ctx.fillStyle = "rgba(230,240,255,0.80)";
-      ctx.fillText(`m = ${M.toFixed(2)}`, mass.x + radius + 10, mass.y + 5);
-
-      requestAnimationFrame(draw);
     }
 
-    draw();
-  </script>
+    // Vertical grid lines
+    for (let gx = -halfW; gx <= halfW; gx += spacingW){
+      const pts = [];
+      for (let y = -halfH; y <= halfH; y += stepW){
+        const z = sheetZ(gx, y);
+        let v = { x: gx, y, z };
+        v = rotateY(v, yaw);
+        v = rotateX(v, pitch);
+        pts.push(project(v, w, h));
+      }
+      const mid = pts[(pts.length/2)|0];
+      const alpha = 0.14 + 0.42 * Math.max(0, Math.min(1, mid.s));
+      strokeLine(pts, alpha);
+    }
+
+    // Horizontal grid lines
+    for (let gy = -halfH; gy <= halfH; gy += spacingW){
+      const pts = [];
+      for (let x = -halfW; x <= halfW; x += stepW){
+        const z = sheetZ(x, gy);
+        let v = { x, y: gy, z };
+        v = rotateY(v, yaw);
+        v = rotateX(v, pitch);
+        pts.push(project(v, w, h));
+      }
+      const mid = pts[(pts.length/2)|0];
+      const alpha = 0.12 + 0.38 * Math.max(0, Math.min(1, mid.s));
+      strokeLine(pts, alpha);
+    }
+
+    // Mass marker
+    const M = +massEl.value;
+    const radius = 18 + 7 * Math.sqrt(M);
+
+    // glow
+    ctx.beginPath();
+    ctx.arc(mass.x, mass.y, radius*2.4, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(255,230,170,0.10)";
+    ctx.fill();
+
+    // body
+    ctx.beginPath();
+    ctx.arc(mass.x, mass.y, radius, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(255,230,190,0.95)";
+    ctx.fill();
+
+    // rim
+    ctx.beginPath();
+    ctx.arc(mass.x, mass.y, radius, 0, Math.PI*2);
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // label
+    ctx.font = "14px system-ui, sans-serif";
+    ctx.fillStyle = "rgba(230,240,255,0.78)";
+    ctx.fillText(`m = ${M.toFixed(2)}`, mass.x + radius + 10, mass.y + 5);
+
+    requestAnimationFrame(draw);
+  }
+
+  // Initial label update + render
+  updateLabels();
+  draw();
+</script>
 </body>
 </html>
