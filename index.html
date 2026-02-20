@@ -104,47 +104,17 @@ h1{
   overflow:hidden;
 }
 
-canvas{
+.sim{
+  height:520px;
+  position:relative;
+}
+
+.sim iframe{
   position:absolute;
   inset:0;
   width:100%;
   height:100%;
-  display:block;
-}
-
-.ui{
-  position:absolute;
-  left:50%;
-  bottom:14px;
-  transform:translateX(-50%);
-  width:min(760px, calc(100% - 28px));
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:12px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,0.14);
-  background:rgba(0,0,0,0.30);
-}
-
-.massWrap{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  font-size:11px;
-  text-transform:uppercase;
-}
-
-input[type="range"]{
-  width:100%;
-  accent-color:#7dc3ff;
-}
-
-.vals{
-  display:flex;
-  justify-content:space-between;
-  font-size:11px;
+  border:0;
 }
 
 .btn{
@@ -302,90 +272,10 @@ theoretical models that are mathematically interesting but lack observational pr
   </div>
 </section>
 
-<!-- SIMULATION -->
 <div class="card">
-<div class="cardHeader">2D Spacetime Warp</div>
-<div class="sim">
-<canvas id="c"></canvas>
+  <div class="cardHeader">2D Spacetime Warp</div>
 
-<div class="ui">
-<div class="massWrap">
-MASS
-<input id="mass" type="range" min="0.2" max="12" step="0.01" value="2.5" />
-<div class="vals"><span id="massVal">2.50</span><span>m</span></div>
+  <div class="sim">
+    <iframe src="./warp/" title="2D Spacetime Warp"></iframe>
+  </div>
 </div>
-
-<button class="btn" id="starBtn">Star</button>
-<button class="btn" id="bhBtn">Black hole</button>
-<button class="btn" id="reset">Reset</button>
-</div>
-</div>
-</div>
-
-</div>
-
-<script>
-const canvas=document.getElementById("c");
-const ctx=canvas.getContext("2d");
-function resize(){const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;}
-window.addEventListener("resize",resize);resize();
-
-const GRID=36,STRENGTH=244,SOFT=25;
-let mode="star";
-const mass={x:0,y:0};
-function resetMass(){mass.x=canvas.width*0.42;mass.y=canvas.height*0.46;}
-resetMass();
-
-const massEl=document.getElementById("mass");
-const massVal=document.getElementById("massVal");
-massEl.oninput=()=>massVal.textContent=(+massEl.value).toFixed(2);
-
-document.getElementById("starBtn").onclick=()=>mode="star";
-document.getElementById("bhBtn").onclick=()=>mode="bh";
-document.getElementById("reset").onclick=()=>resetMass();
-
-canvas.onpointerdown=e=>{
-const r=canvas.getBoundingClientRect();
-mass.x=e.clientX-r.left;
-mass.y=e.clientY-r.top;
-};
-
-function warp(x,y){
-const vx=x-mass.x,vy=y-mass.y;
-const a=mode==="bh"?0:SOFT;
-const r2=vx*vx+vy*vy+a*a+1e-6;
-const f=-(STRENGTH*(+massEl.value))/r2;
-return{x:x+f*vx,y:y+f*vy};
-}
-
-function draw(){
-ctx.clearRect(0,0,canvas.width,canvas.height);
-for(let gx=0;gx<=canvas.width;gx+=GRID){
-ctx.beginPath();
-for(let y=0;y<=canvas.height;y+=6){
-const p=warp(gx,y);
-y===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
-}
-ctx.strokeStyle="rgba(200,200,200,0.4)";
-ctx.stroke();
-}
-for(let gy=0;gy<=canvas.height;gy+=GRID){
-ctx.beginPath();
-for(let x=0;x<=canvas.width;x+=6){
-const p=warp(x,gy);
-x===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
-}
-ctx.strokeStyle="rgba(200,200,200,0.4)";
-ctx.stroke();
-}
-ctx.beginPath();
-ctx.arc(mass.x,mass.y,18,0,Math.PI*2);
-ctx.fillStyle="rgba(255,230,190,0.9)";
-ctx.fill();
-requestAnimationFrame(draw);
-}
-draw();
-</script>
-
-</body>
-</html>
