@@ -238,33 +238,66 @@ details[open] .summaryArrow{
   border-top:1px solid rgba(255,255,255,0.10);
 }
 
-.definitionsContent{
-  padding:24px;
-  font-size:15px;
-  line-height:1.75;
+/* --- In-Depth Sliding Panel --- */
+
+.sideTab{
+  position:fixed;
+  top:0;
+  left:0;
+  height:100vh;
+  width:50px;
+  background:rgba(0,0,0,0.85);
+  border-right:1px solid rgba(255,255,255,0.15);
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding-top:20px;
+  cursor:pointer;
+  z-index:1000;
 }
 
-.definitionsDL{
-  margin:0;
+.sideTab span{
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  font-weight:600;
+  letter-spacing:0.08em;
+  font-size:14px;
+  opacity:0.85;
 }
 
-.definitionsDL dt{
-  font-weight:700;
-  margin-top:22px;
-  letter-spacing:0.02em;
+/* Sliding panel */
+.inDepthPanel{
+  position:fixed;
+  top:0;
+  left:-400px;   /* hidden by default */
+  width:400px;
+  height:100vh;
+  background:#111;
+  border-right:1px solid rgba(255,255,255,0.15);
+  box-shadow: 10px 0 40px rgba(0,0,0,0.6);
+  padding:30px;
+  overflow-y:auto;
+  transition:left 0.35s ease;
+  z-index:999;
 }
 
-.definitionsDL dd{
-  margin:8px 0 16px 0;
-  opacity:0.92;
-  padding-bottom:14px;
-  border-bottom:1px solid rgba(255,255,255,0.06);
+.inDepthPanel.open{
+  left:50px;  /* slides out next to the tab */
 }
 
-.definitionsDL dd:last-child{
-  border-bottom:none;
+.inDepthPanel h2{
+  margin-top:0;
 }
 
+.closeBtn{
+  margin-top:20px;
+  padding:8px 14px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.05);
+  cursor:pointer;
+}
+  
 </style>
 </head>
 
@@ -509,3 +542,33 @@ theoretical models that are mathematically interesting but lack observational pr
 </div>
   </details>
 </section>
+
+<!-- IN-DEPTH SIDE TAB -->
+<div class="sideTab" onclick="togglePanel()">
+  <span>In-Depth Section</span>
+</div>
+
+<div class="inDepthPanel" id="inDepthPanel">
+  <h2>In-Depth Section</h2>
+
+  <p>
+    Placeholder text. This panel will eventually contain extended analysis,
+    mathematical explanations, derivations, and deeper discussion of the
+    concepts introduced on the main page.
+  </p>
+
+  <p>
+    You can expand this to include equations, diagrams, references,
+    or interactive content.
+  </p>
+
+  <button class="closeBtn" onclick="togglePanel()">Close</button>
+</div>
+  <script>
+function togglePanel(){
+  const panel = document.getElementById("inDepthPanel");
+  panel.classList.toggle("open");
+}
+</script>
+</body>
+</html>
